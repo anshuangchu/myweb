@@ -167,6 +167,45 @@ function runAutoFormat() {
     }
 }
 
+// ===== AI 排版 =====
+function runAiFormat() {
+    const article = document.querySelector('.article-content');
+    if (!article) return;
+    const btn = document.getElementById('btnAiFormat');
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfMeta) return;
+
+    if (btn) { btn.textContent = 'AI 分析中...'; btn.disabled = true; }
+
+    const content = article.innerHTML;
+    const title = document.querySelector('.article-header h1')?.textContent || '';
+
+    fetch('/myweb/ai_format.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'content=' + encodeURIComponent(content) + '&title=' + encodeURIComponent(title) + '&csrf_token=' + encodeURIComponent(csrfMeta.content)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success && res.html) {
+            article.innerHTML = res.html;
+            if (btn) { btn.textContent = '✓ AI 排版完成'; btn.style.background = 'var(--success)'; btn.style.color = '#fff'; }
+        } else {
+            if (btn) { btn.textContent = 'AI 排版失败'; }
+            showToast(res.error || 'AI 服务异常', 'error');
+        }
+    })
+    .catch(() => {
+        if (btn) { btn.textContent = 'AI 排版失败'; }
+        showToast('网络错误，请重试', 'error');
+    })
+    .finally(() => {
+        setTimeout(() => {
+            if (btn) { btn.textContent = 'AI 排版'; btn.disabled = false; btn.style.background = ''; btn.style.color = ''; }
+        }, 2500);
+    });
+}
+
 // 页面加载时自动执行一次
 document.addEventListener('DOMContentLoaded', () => {
     if (document.querySelector('.article-content')) runAutoFormat();

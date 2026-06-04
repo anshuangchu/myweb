@@ -1061,6 +1061,17 @@ body {
   cursor: not-allowed;
 }
 
+.btn-ai {
+  border-color: rgba(168,130,255,0.4);
+  background: rgba(168,130,255,0.06);
+  color: #b8a0ff;
+}
+.btn-ai:hover {
+  background: #7c5ce7;
+  border-color: #7c5ce7;
+  color: #fff;
+}
+
 .toolbar-hint {
   font-size: 0.75rem;
   color: var(--gray-600);
