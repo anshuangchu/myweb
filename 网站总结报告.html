@@ -1,0 +1,226 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word'
+      xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<title>网站总结报告</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+body { font-family: 'Microsoft YaHei', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #333; margin: 40px; }
+h1 { color: #1a73e8; font-size: 22pt; border-bottom: 2px solid #1a73e8; padding-bottom: 8px; }
+h2 { color: #1a73e8; font-size: 16pt; margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+h3 { color: #333; font-size: 13pt; margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 10pt; }
+th { background: #1a73e8; color: #fff; }
+tr:nth-child(even) { background: #f5f8ff; }
+ul { margin: 4px 0; padding-left: 20px; }
+li { margin: 2px 0; }
+.section { margin: 16px 0; }
+.tag { display: inline-block; background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 4px; font-size: 9pt; margin: 2px; }
+.highlight { background: #fff3cd; padding: 1px 4px; }
+</style>
+</head>
+<body>
+
+<h1>网站总结与优化报告</h1>
+
+<p><strong>项目名称：</strong>个人内容管理系统（CMS）<br>
+<strong>访问地址：</strong>http://47.96.109.189/myweb/<br>
+<strong>域名：</strong>anshuangchu.online（ICP备案待审批）<br>
+<strong>生成日期：</strong>2026-05-25</p>
+
+<!-- ==================== 一、项目概况 ==================== -->
+<h2>一、项目概况</h2>
+<p>基于 PHP + MySQL 构建的个人博客/CMS 系统，部署于阿里云轻量服务器（Ubuntu 24.04 LTS, Nginx, PHP 8.3, MariaDB），支持多角色权限管理、文章发布审核、文件管理、分类标签体系、独立页面、友链和公告等功能。当前共有 3 个注册用户，1 篇已发布文章。</p>
+
+<!-- ==================== 二、技术栈 ==================== -->
+<h2>二、技术栈</h2>
+<table>
+<tr><th>层级</th><th>技术</th><th>版本</th></tr>
+<tr><td>服务器</td><td>阿里云轻量应用服务器</td><td>2核2G</td></tr>
+<tr><td>操作系统</td><td>Ubuntu</td><td>24.04 LTS</td></tr>
+<tr><td>Web 服务器</td><td>Nginx</td><td>1.24.0</td></tr>
+<tr><td>后端语言</td><td>PHP (FPM)</td><td>8.3</td></tr>
+<tr><td>数据库</td><td>MariaDB</td><td>10.11.14</td></tr>
+<tr><td>开发环境</td><td>XAMPP (Windows)</td><td>PHP 8.2</td></tr>
+<tr><td>前端</td><td>纯 CSS 暗色主题 + 原生 JS</td><td>—</td></tr>
+<tr><td>远程管理</td><td>SSH 密钥认证</td><td>—</td></tr>
+</table>
+
+<!-- ==================== 三、功能模块 ==================== -->
+<h2>三、功能模块清单</h2>
+
+<h3>3.1 用户系统</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>注册</td><td>需邀请码（anshuangchu2026），密码≥8位且含字母+数字</td></tr>
+<tr><td>登录</td><td>支持用户名或邮箱登录，5次失败IP锁定15分钟</td></tr>
+<tr><td>角色体系</td><td>super_admin → admin → editor → user，菜单按角色动态显示</td></tr>
+</table>
+
+<h3>3.2 文章系统</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>发布/编辑</td><td>支持标题、内容（HTML）、摘要、封面图、分类、标签</td></tr>
+<tr><td>审核流程</td><td>editor 提交后需 admin/super_admin 审核通过才能发布</td></tr>
+<tr><td>状态管理</td><td>草稿 → 待审核 → 已发布 / 归档</td></tr>
+<tr><td>浏览统计</td><td>自动增加阅读量，支持按日期或浏览量排序</td></tr>
+<tr><td>首页展示</td><td>文章卡片含封面图、摘要、标签，右侧边栏分类/标签/最近文章</td></tr>
+</table>
+
+<h3>3.3 分类与标签</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>分类管理</td><td>增删改，支持名称和描述，关联文章计数</td></tr>
+<tr><td>标签系统</td><td>多对多关系，前台标签云，点击筛选同标签文章</td></tr>
+</table>
+
+<h3>3.4 资料（Pages）</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>独立页面</td><td>区别于文章，用于"关于我"等固定栏目，自定义 slug</td></tr>
+<tr><td>前台展示</td><td>/pages.php 列表，/page.php?slug=xxx 详情</td></tr>
+</table>
+
+<h3>3.5 文件管理</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>上传</td><td>拖拽上传，支持图片/文档/压缩包等常见格式（≤50MB）</td></tr>
+<tr><td>管理</td><td>文件网格预览，复制链接，删除</td></tr>
+<tr><td>前台</td><td>文件中心页面，按类型图标展示，支持下载</td></tr>
+</table>
+
+<h3>3.6 后台管理</h3>
+<table>
+<tr><th>模块</th><th>可访问角色</th></tr>
+<tr><td>控制台</td><td>editor+ — 统计概览（文章数、用户数、待审核、友链、公告）</td></tr>
+<tr><td>文章管理</td><td>editor+ — 编辑/删除/审批/排序</td></tr>
+<tr><td>标签管理</td><td>admin+</td></tr>
+<tr><td>资料管理</td><td>editor+</td></tr>
+<tr><td>文件管理</td><td>editor+</td></tr>
+<tr><td>分类管理</td><td>admin+</td></tr>
+<tr><td>友链管理</td><td>admin+</td></tr>
+<tr><td>公告管理</td><td>admin+</td></tr>
+<tr><td>用户管理</td><td>admin+</td></tr>
+<tr><td>站点设置</td><td>super_admin</td></tr>
+</table>
+
+<h3>3.7 其他功能</h3>
+<table>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>友链</td><td>后台管理，前台 footer 上方展示</td></tr>
+<tr><td>公告栏</td><td>全站顶部滚动公告，后台启停控制</td></tr>
+<tr><td>暗色主题</td><td>CSS 自定义变量，全局暗色设计，手机自适应</td></tr>
+<tr><td>导航菜单</td><td>首页 → 资料 → 文件中心 → 登录/管理后台，移动端汉堡菜单</td></tr>
+</table>
+
+<!-- ==================== 四、数据库结构 ==================== -->
+<h2>四、数据库结构</h2>
+<p>共 10 张表：</p>
+<table>
+<tr><th>表名</th><th>说明</th><th>记录数</th></tr>
+<tr><td>users</td><td>用户（含角色、状态）</td><td>3</td></tr>
+<tr><td>articles</td><td>文章（含标题、内容、状态、浏览量、封面）</td><td>1</td></tr>
+<tr><td>categories</td><td>分类</td><td>1</td></tr>
+<tr><td>tags</td><td>标签</td><td>0</td></tr>
+<tr><td>article_tags</td><td>文章-标签关联（多对多）</td><td>0</td></tr>
+<tr><td>pages</td><td>独立页面</td><td>1</td></tr>
+<tr><td>links</td><td>友链</td><td>0</td></tr>
+<tr><td>announcements</td><td>公告</td><td>0</td></tr>
+<tr><td>settings</td><td>站点设置键值对</td><td>—</td></tr>
+<tr><td>login_attempts</td><td>登录失败记录（频率限制）</td><td>—</td></tr>
+</table>
+
+<!-- ==================== 五、后续优化改进措施 ==================== -->
+<h2>五、后续优化改进措施</h2>
+
+<h3>第一阶段：安全加固</h3>
+<ol>
+<li><strong>HTTPS 配置</strong> — ICP备案通过后，使用 Certbot（Let's Encrypt）配置免费 SSL 证书，HTTP 自动跳转 HTTPS</li>
+<li><strong>Nginx 安全头</strong> — 添加 X-Frame-Options、X-Content-Type-Options、HSTS 等安全响应头</li>
+<li><strong>CSRF 防护</strong> — 在表单中注入 CSRF Token，校验 POST 来源</li>
+<li><strong>文件上传校验</strong> — 限制可执行文件上传，上传目录禁止 PHP 执行</li>
+</ol>
+
+<h3>第二阶段：功能完善</h3>
+<ol>
+<li><strong>文章搜索</strong> — 支持按标题/内容关键词搜索（LIKE 或 FULLTEXT 索引）</li>
+<li><strong>文章分页</strong> — 首页和管理列表分页加载，避免文章过多时性能问题</li>
+<li><strong>个人中心</strong> — 用户可修改头像、昵称、密码</li>
+<li><strong>评论区</strong> — 访客可评论文章，管理员审核后展示</li>
+<li><strong>编辑器升级</strong> — 替换纯文本编辑框为轻量级富文本编辑器或 Markdown 编辑器</li>
+<li><strong>图片粘贴上传</strong> — 编辑器内粘贴剪贴板图片自动上传并插入</li>
+</ol>
+
+<h3>第三阶段：性能优化</h3>
+<ol>
+<li><strong>静态资源缓存</strong> — Nginx 配置强缓存头（Cache-Control），CSS/JS/图片缓存 1 年</li>
+<li><strong>Gzip 压缩</strong> — Nginx 开启 gzip，减小传输体积</li>
+<li><strong>数据库索引优化</strong> — 为常用查询字段（status、created_at、category_id）添加索引</li>
+<li><strong>OPcache</strong> — 确认 PHP OPcache 已开启，提高 PHP 执行效率</li>
+</ol>
+
+<h3>第四阶段：运维与体验</h3>
+<ol>
+<li><strong>自动备份</strong> — crontab 定时备份数据库和 uploads 目录</li>
+<li><strong>SEO 优化</strong> — 每篇文章独立 meta description，URL 伪静态（/article/123）</li>
+<li><strong>RSS 订阅</strong> — 输出标准 RSS 2.0 Feed</li>
+<li><strong>站点地图</strong> — 生成 sitemap.xml 提交搜索引擎</li>
+<li><strong>监控告警</strong> — 部署 Uptime Kuma 或阿里云云监控，网站宕机及时通知</li>
+</ol>
+
+<h3>第五阶段：代码架构优化</h3>
+<ol>
+<li><strong>路由重构</strong> — 当前 URL 为 ?id=123 形式，可改用 Nginx rewrite 实现伪静态</li>
+<li><strong>类封装</strong> — 将函数式代码逐步迁移到类（User、Article、Tag 等 Model）</li>
+<li><strong>统一错误处理</strong> — 建立全局异常处理机制，开发/生产环境区分显示</li>
+<li><strong>日志系统</strong> — 统一记录操作日志（文章变更、登录、权限操作）</li>
+</ol>
+
+<!-- ==================== 附：当前文件清单 ==================== -->
+<h2>附录：当前文件结构</h2>
+<table>
+<tr><th>路径</th><th>说明</th></tr>
+<tr><td>/config/database.php</td><td>数据库连接、通用函数（db、isLoggedIn、currentUser、hasRole、rate limiter、sortField 等）</td></tr>
+<tr><td>/includes/header.php</td><td>页面头部（session、导航栏、公告栏）</td></tr>
+<tr><td>/includes/footer.php</td><td>页脚、友链区域</td></tr>
+<tr><td>/includes/admin_sidebar.php</td><td>后台管理侧边栏（共享）</td></tr>
+<tr><td>/index.php</td><td>首页（文章列表、侧边栏、排序、标签筛选）</td></tr>
+<tr><td>/article.php</td><td>文章详情页</td></tr>
+<tr><td>/pages.php</td><td>资料列表页</td></tr>
+<tr><td>/page.php</td><td>资料详情页</td></tr>
+<tr><td>/files.php</td><td>文件中心</td></tr>
+<tr><td>/login.php</td><td>登录</td></tr>
+<tr><td>/register.php</td><td>注册（含邀请码、密码强度）</td></tr>
+<tr><td>/logout.php</td><td>退出</td></tr>
+<tr><td>/install.php</td><td>数据库安装脚本（部署后已删除）</td></tr>
+<tr><td>/upload.php</td><td>前台文件上传</td></tr>
+<tr><td>/admin/index.php</td><td>后台控制台</td></tr>
+<tr><td>/admin/articles.php</td><td>文章管理（含审核操作）</td></tr>
+<tr><td>/admin/article_edit.php</td><td>文章编辑（含标签选择）</td></tr>
+<tr><td>/admin/categories.php</td><td>分类管理（增删改）</td></tr>
+<tr><td>/admin/tags.php</td><td>标签管理</td></tr>
+<tr><td>/admin/pages.php</td><td>资料管理</td></tr>
+<tr><td>/admin/page_edit.php</td><td>资料编辑</td></tr>
+<tr><td>/admin/links.php</td><td>友链管理</td></tr>
+<tr><td>/admin/announcements.php</td><td>公告管理</td></tr>
+<tr><td>/admin/files.php</td><td>文件管理（上传/预览/删除）</td></tr>
+<tr><td>/admin/users.php</td><td>用户管理（角色变更、启用/禁用）</td></tr>
+<tr><td>/admin/settings.php</td><td>站点设置（super_admin）</td></tr>
+<tr><td>/css/style.css</td><td>暗色主题样式表</td></tr>
+<tr><td>/js/script.js</td><td>前端交互（导航切换、编辑器工具栏、动画）</td></tr>
+</table>
+
+<p style="text-align:center;color:#999;margin-top:40px;border-top:1px solid #ddd;padding-top:16px">
+— 报告完毕 —
+</p>
+
+</body>
+</html>

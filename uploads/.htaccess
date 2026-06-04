@@ -1,0 +1,12 @@
+# Deny direct PHP execution
+<FilesMatch "\.php$">
+    Deny from all
+</FilesMatch>
+
+# Disable directory listing
+Options -Indexes
+
+# Prevent access to .htaccess itself
+<Files ".htaccess">
+    Deny from all
+</Files>
