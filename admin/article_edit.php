@@ -30,16 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tagNames = $_POST['tags'] ?? [];
 
     if (!hasRole('super_admin', 'admin') && $status === 'published') $status = 'pending';
-    if (!$title) $error = 'è¯·è¾“å…¥æ–‡ç« æ ‡é¢˜';
+    if (!$title) $error = 'ÇëÊäÈëÎÄÕÂ±êÌâ';
 
     $cover_image = $article['cover_image'];
     if (!$error && !empty($_FILES['cover_image']['name'])) {
-        if ($_FILES['cover_image']['size'] > 5 * 1024 * 1024) { $error = 'å°é¢å›¾ç‰‡ä¸èƒ½è¶…è¿‡ 5MB'; }
+        if ($_FILES['cover_image']['size'] > 5 * 1024 * 1024) { $error = '·âÃæÍ¼Æ¬²»ÄÜ³¬¹ı 5MB'; }
         else {
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($finfo, $_FILES['cover_image']['tmp_name']); finfo_close($finfo);
             if (!in_array($mime, ['image/jpeg','image/png','image/gif','image/webp']) || !getimagesize($_FILES['cover_image']['tmp_name'])) {
-                $error = 'ä»…æ”¯æŒ JPG/PNG/GIF/WebP';
+                $error = '½öÖ§³Ö JPG/PNG/GIF/WebP';
             } else {
                 $ext = pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION);
                 $filename = 'uploads/' . uniqid() . '.' . $ext;
@@ -78,70 +78,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?= csrfField() ?>
         <?php if ($error): ?><div class="alert alert-error"><?= $error ?></div><?php endif; ?>
 
-        <!-- æ ‡é¢˜ -->
         <input type="text" name="title" class="ed-title" required
-               value="<?= htmlspecialchars($article['title']) ?>" placeholder="è¾“å…¥æ–‡ç« æ ‡é¢˜...">
+               value="<?= htmlspecialchars($article['title']) ?>" placeholder="ÊäÈëÎÄÕÂ±êÌâ...">
 
-        <!-- èœå•æ  -->
         <div class="ed-ribbon">
             <div class="ed-group">
-                <button type="button" class="ed-btn" onclick="wrap('h2')" title="äºŒçº§æ ‡é¢˜"><b>H2</b></button>
-                <button type="button" class="ed-btn" onclick="wrap('h3')" title="ä¸‰çº§æ ‡é¢˜"><b>H3</b></button>
-                <button type="button" class="ed-btn" onclick="wrap('h4')" title="å››çº§æ ‡é¢˜">H4</button>
+                <button type="button" class="ed-btn" onclick="wrap('h2')" title="¶ş¼¶±êÌâ"><b>H2</b></button>
+                <button type="button" class="ed-btn" onclick="wrap('h3')" title="Èı¼¶±êÌâ"><b>H3</b></button>
+                <button type="button" class="ed-btn" onclick="wrap('h4')" title="ËÄ¼¶±êÌâ">H4</button>
             </div>
             <div class="ed-group">
-                <button type="button" class="ed-btn" onclick="wrap('strong')" title="ç²—ä½“"><b>B</b></button>
-                <button type="button" class="ed-btn" onclick="wrap('em')" title="æ–œä½“"><i>I</i></button>
-                <button type="button" class="ed-btn" onclick="wrap('u')" title="ä¸‹åˆ’çº¿"><u>U</u></button>
-                <button type="button" class="ed-btn" onclick="wrap('code')" title="è¡Œå†…ä»£ç ">&lt;/&gt;</button>
+                <button type="button" class="ed-btn" onclick="wrap('strong')" title="´ÖÌå"><b>B</b></button>
+                <button type="button" class="ed-btn" onclick="wrap('em')" title="Ğ±Ìå"><i>I</i></button>
+                <button type="button" class="ed-btn" onclick="wrap('u')" title="ÏÂ»®Ïß"><u>U</u></button>
+                <button type="button" class="ed-btn" onclick="wrap('code')" title="ĞĞÄÚ´úÂë">&lt;/&gt;</button>
             </div>
             <div class="ed-group">
-                <button type="button" class="ed-btn" onclick="insertBlock('pre')" title="ä»£ç å—">â—» ä»£ç å—</button>
-                <button type="button" class="ed-btn" onclick="insertBlock('blockquote')" title="å¼•ç”¨">â å¼•ç”¨</button>
-                <button type="button" class="ed-btn" onclick="insertWarn()" title="è­¦å‘Šæç¤º">âš  è­¦å‘Š</button>
+                <button type="button" class="ed-btn" onclick="insertBlock('pre')" title="´úÂë¿é">7¢2 ´úÂë¿é</button>
+                <button type="button" class="ed-btn" onclick="insertBlock('blockquote')" title="ÒıÓÃ">7Å1 ÒıÓÃ</button>
+                <button type="button" class="ed-btn" onclick="insertWarn()" title="¾¯¸æÌáÊ¾">7²2 ¾¯¸æ</button>
             </div>
             <div class="ed-group">
-                <button type="button" class="ed-btn" onclick="insertList('ul')" title="æ— åºåˆ—è¡¨">â€¢ åˆ—è¡¨</button>
-                <button type="button" class="ed-btn" onclick="insertList('ol')" title="æœ‰åºåˆ—è¡¨">1. åˆ—è¡¨</button>
+                <button type="button" class="ed-btn" onclick="insertList('ul')" title="ÎŞĞòÁĞ±í">6¦1 ÁĞ±í</button>
+                <button type="button" class="ed-btn" onclick="insertList('ol')" title="ÓĞĞòÁĞ±í">1. ÁĞ±í</button>
             </div>
             <div class="ed-group">
-                <button type="button" class="ed-btn" onclick="insertLink()" title="æ’å…¥é“¾æ¥">ğŸ”— é“¾æ¥</button>
-                <button type="button" class="ed-btn" onclick="insertImg()" title="æ’å…¥å›¾ç‰‡">ğŸ–¼ å›¾ç‰‡</button>
-                <button type="button" class="ed-btn" onclick="insertHR()" title="åˆ†éš”çº¿">â€”</button>
-            </div>
-            <div class="ed-group" style="margin-left:auto">
-                <button type="button" class="ed-btn ed-btn-accent" onclick="doFormat()" title="æ™ºèƒ½æ’ç‰ˆ">âœ¨ æ’ç‰ˆ</button>
+                <button type="button" class="ed-btn" onclick="insertLink()" title="²åÈëÁ´½Ó">”9å3 Á´½Ó</button>
+                <button type="button" class="ed-btn" onclick="insertImg()" title="²åÈëÍ¼Æ¬">”9õ8 Í¼Æ¬</button>
+                <button type="button" class="ed-btn" onclick="insertHR()" title="·Ö¸ôÏß">¡ª</button>
             </div>
         </div>
 
-        <!-- ç¼–è¾‘åŒº -->
         <div class="ed-area">
             <textarea name="content" id="editor" class="ed-textarea"
-                      placeholder="å¼€å§‹å†™ä½œ... ä½¿ç”¨ä¸Šæ–¹å·¥å…·æ æ ¼å¼åŒ–æ–‡æœ¬ã€‚æ‰€å†™å³æ‰€è§ã€‚"><?= htmlspecialchars($article['content']) ?></textarea>
-            <div class="ed-preview article-content" id="preview"></div>
+                      placeholder="¿ªÊ¼Ğ´×÷... Ê¹ÓÃÉÏ·½¹¤¾ßÀ¸¸ñÊ½»¯ÎÄ±¾¡£"><?= htmlspecialchars($article['content']) ?></textarea>
         </div>
 
-        <!-- åº•éƒ¨æ“ä½œ -->
         <div class="ed-foot">
-            <button type="submit" class="btn btn-primary"><?= $id ? 'ä¿å­˜ä¿®æ”¹' : 'å‘å¸ƒæ–‡ç« ' ?></button>
-            <a href="/myweb/admin/articles.php" class="btn">å–æ¶ˆ</a>
-            <span class="ed-foot-status">Ctrl+S Â· é€‰ä¸­æ–‡å­—ç‚¹å‡»å·¥å…·æ æŒ‰é’®æ ¼å¼åŒ–</span>
+            <button type="submit" class="btn btn-primary"><?= $id ? '±£´æĞŞ¸Ä' : '·¢²¼ÎÄÕÂ' ?></button>
+            <a href="/myweb/admin/articles.php" class="btn">È¡Ïû</a>
+            <span class="ed-foot-status">Ctrl+S ±£´æ ¡¤ Ñ¡ÖĞÎÄ×Öµã»÷¹¤¾ßÀ¸¸ñÊ½»¯</span>
         </div>
 
-        <!-- å³ä¾§è®¾ç½® -->
         <div class="ed-sidebar">
             <div class="es-card">
-                <div class="es-card-title">å‘å¸ƒè®¾ç½®</div>
-                <div class="form-group"><label>çŠ¶æ€</label>
+                <div class="es-card-title">·¢²¼ÉèÖÃ</div>
+                <div class="form-group"><label>×´Ì¬</label>
                 <select name="status" class="e-select" style="width:100%">
-                    <option value="draft" <?= $article['status']=='draft'?'selected':'' ?>>è‰ç¨¿</option>
-                    <option value="pending" <?= $article['status']=='pending'?'selected':'' ?>>å¾…å®¡æ ¸</option>
-                    <option value="published" <?= $article['status']=='published'?'selected':'' ?>>å‘å¸ƒ</option>
-                    <option value="archived" <?= $article['status']=='archived'?'selected':'' ?>>å½’æ¡£</option>
+                    <option value="draft" <?= $article['status']=='draft'?'selected':'' ?>>²İ¸å</option>
+                    <option value="pending" <?= $article['status']=='pending'?'selected':'' ?>>´ıÉóºË</option>
+                    <option value="published" <?= $article['status']=='published'?'selected':'' ?>>·¢²¼</option>
+                    <option value="archived" <?= $article['status']=='archived'?'selected':'' ?>>¹éµµ</option>
                 </select></div>
-                <div class="form-group"><label>åˆ†ç±»</label>
+                <div class="form-group"><label>·ÖÀà</label>
                 <select name="category_id" class="e-select" style="width:100%">
-                    <option value="">æ— åˆ†ç±»</option>
+                    <option value="">ÎŞ·ÖÀà</option>
                     <?php foreach ($categories as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $c['id']==$article['category_id']?'selected':'' ?>><?= htmlspecialchars($c['name']) ?></option>
                     <?php endforeach; ?>
@@ -149,22 +140,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="es-card">
-                <div class="es-card-title">æ ‡ç­¾</div>
-                <input type="text" id="tagInput" placeholder="ç©ºæ ¼æˆ–é€—å·åˆ†éš”" value="<?= htmlspecialchars(implode(', ', array_column($articleTags, 'name'))) ?>" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem">
+                <div class="es-card-title">±êÇ©</div>
+                <input type="text" id="tagInput" placeholder="¿Õ¸ñ»ò¶ººÅ·Ö¸ô" value="<?= htmlspecialchars(implode(', ', array_column($articleTags, 'name'))) ?>" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem">
                 <div id="tagsHidden"></div>
                 <div id="tagsChips" class="tag-chips" style="margin-top:6px"></div>
                 <?php if ($allTags): ?><div class="tag-suggestions" style="margin-top:6px"><?php foreach ($allTags as $t): ?><span class="tag tag-suggest" onclick="addTag('<?= htmlspecialchars($t['name'], ENT_QUOTES) ?>')"><?= htmlspecialchars($t['name']) ?></span><?php endforeach; ?></div><?php endif; ?>
             </div>
 
             <div class="es-card">
-                <div class="es-card-title">å°é¢å›¾ç‰‡</div>
+                <div class="es-card-title">·âÃæÍ¼Æ¬</div>
                 <input type="file" name="cover_image" accept="image/*" style="font-size:0.82rem;width:100%">
                 <?php if ($article['cover_image']): ?><img src="/myweb/<?= $article['cover_image'] ?>" style="max-width:100%;margin-top:8px;border-radius:8px"><?php endif; ?>
             </div>
 
             <div class="es-card">
-                <div class="es-card-title">æ‘˜è¦</div>
-                <textarea name="summary" rows="2" placeholder="å¯é€‰" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem;resize:vertical"><?= htmlspecialchars($article['summary']) ?></textarea>
+                <div class="es-card-title">ÕªÒª</div>
+                <textarea name="summary" rows="2" placeholder="¿ÉÑ¡" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem;resize:vertical"><?= htmlspecialchars($article['summary']) ?></textarea>
             </div>
         </div>
         </form>
@@ -173,19 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 const ta = document.getElementById('editor');
-const pv = document.getElementById('preview');
 
-// ===== å®æ—¶åŒæ­¥é¢„è§ˆ =====
-function sync() {
-    pv.innerHTML = ta.value || '<p style="color:var(--gray-500);text-align:center;padding:40px">é¢„è§ˆåŒº</p>';
-    pv.querySelectorAll('pre').forEach(p => {
-        if (!p.hasAttribute('data-lang')) p.setAttribute('data-lang','CODE');
-    });
-}
-ta.addEventListener('input', sync);
-sync();
-
-// ===== å·¥å…·æ å‡½æ•° =====
 function wrap(tag) {
     const s = ta.selectionStart, e = ta.selectionEnd;
     const sel = ta.value.substring(s, e) || tag.toUpperCase();
@@ -193,76 +172,62 @@ function wrap(tag) {
     ta.value = ta.value.substring(0, s) + html + ta.value.substring(e);
     ta.focus();
     ta.setSelectionRange(s + tag.length + 2, s + tag.length + 2 + sel.length);
-    sync();
 }
 
 function insertBlock(type) {
     const s = ta.selectionStart, e = ta.selectionEnd;
-    let sel = ta.value.substring(s, e) || 'å†…å®¹';
+    let sel = ta.value.substring(s, e) || 'ÄÚÈİ';
     let html;
     if (type === 'pre') html = '\n<pre><code>' + sel + '</code></pre>\n';
     else if (type === 'blockquote') html = '\n<blockquote><p>' + sel + '</p></blockquote>\n';
     ta.value = ta.value.substring(0, s) + html + ta.value.substring(e);
     ta.focus();
-    sync();
 }
 
 function insertWarn() {
     const s = ta.selectionStart, e = ta.selectionEnd;
-    const sel = ta.value.substring(s, e) || 'æ³¨æ„å†…å®¹';
+    const sel = ta.value.substring(s, e) || '×¢ÒâÄÚÈİ';
     ta.value = ta.value.substring(0, s) + '\n<p class="article-warn">' + sel + '</p>\n' + ta.value.substring(e);
-    ta.focus(); sync();
+    ta.focus();
 }
 
 function insertList(type) {
     const s = ta.selectionStart;
     const tag = type === 'ol' ? 'ol' : 'ul';
-    const html = '\n<' + tag + '>\n  <li>é¡¹ç›®ä¸€</li>\n  <li>é¡¹ç›®äºŒ</li>\n  <li>é¡¹ç›®ä¸‰</li>\n</' + tag + '>\n';
+    const html = '\n<' + tag + '>\n  <li>ÏîÄ¿Ò»</li>\n  <li>ÏîÄ¿¶ş</li>\n  <li>ÏîÄ¿Èı</li>\n</' + tag + '>\n';
     ta.value = ta.value.substring(0, s) + html + ta.value.substring(s);
-    ta.focus(); sync();
+    ta.focus();
 }
 
 function insertLink() {
-    const url = prompt('é“¾æ¥åœ°å€:', 'https://');
+    const url = prompt('Á´½ÓµØÖ·:', 'https://');
     if (!url) return;
     const s = ta.selectionStart, e = ta.selectionEnd;
     const sel = ta.value.substring(s, e) || url;
     ta.value = ta.value.substring(0, s) + '<a href="' + url + '" target="_blank">' + sel + '</a>' + ta.value.substring(e);
-    ta.focus(); sync();
+    ta.focus();
 }
 
 function insertImg() {
-    const url = prompt('å›¾ç‰‡åœ°å€:', 'https://');
+    const url = prompt('Í¼Æ¬µØÖ·:', 'https://');
     if (!url) return;
     const s = ta.selectionStart;
     ta.value = ta.value.substring(0, s) + '<img src="' + url + '" alt="" style="max-width:100%">\n' + ta.value.substring(s);
-    ta.focus(); sync();
+    ta.focus();
 }
 
 function insertHR() {
     const s = ta.selectionStart;
     ta.value = ta.value.substring(0, s) + '\n<hr>\n' + ta.value.substring(s);
-    ta.focus(); sync();
+    ta.focus();
 }
 
-function doFormat() {
-    if (!ta.value.trim()) return;
-    fetch('/myweb/ai_format.php', {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'content='+encodeURIComponent(ta.value)+'&csrf_token='+document.querySelector('[name=csrf_token]').value
-    })
-    .then(r=>r.json()).then(r=>{if(r.success){ta.value=r.html;sync();}}).catch(()=>{});
-}
-
-// ===== æ ‡ç­¾ =====
 function tags() { return [...new Set(document.getElementById('tagInput').value.split(/[,\s]+/).map(t=>t.trim()).filter(t=>t))]; }
-function renderTags() { const ts=tags(); document.getElementById('tagsChips').innerHTML=ts.map(t=>'<span class="tag tag-selected" onclick="rmTag(\''+t.replace(/'/g,"\\'")+'\')">'+t+' âœ•</span>').join(''); document.getElementById('tagsHidden').innerHTML=ts.map(t=>'<input type="hidden" name="tags[]" value="'+t.replace(/"/g,'&quot;')+'" form="articleForm">').join(''); }
+function renderTags() { const ts=tags(); document.getElementById('tagsChips').innerHTML=ts.map(t=>'<span class="tag tag-selected" onclick="rmTag(\''+t.replace(/'/g,"\\'")+'\')">'+t+' 7½9</span>').join(''); document.getElementById('tagsHidden').innerHTML=ts.map(t=>'<input type="hidden" name="tags[]" value="'+t.replace(/"/g,'&quot;')+'" form="articleForm">').join(''); }
 function addTag(n) { const i=document.getElementById('tagInput'), t=tags(); if(!t.includes(n)){t.push(n);i.value=t.join(', ');renderTags();} }
 function rmTag(n) { const i=document.getElementById('tagInput'); i.value=tags().filter(t=>t!==n).join(', ');renderTags(); }
 document.addEventListener('DOMContentLoaded',()=>{renderTags();document.getElementById('tagInput').addEventListener('input',renderTags);});
 
-// ===== å¿«æ·é”® =====
 document.addEventListener('keydown',function(e){
     if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); }
     if ((e.ctrlKey||e.metaKey) && e.key==='b') { e.preventDefault(); wrap('strong'); }
