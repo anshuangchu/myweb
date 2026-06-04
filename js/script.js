@@ -13,10 +13,11 @@ function runAutoFormat() {
 
     const rawHTML = article.innerHTML;
 
-    // 判断是否需要全文重构（<br>密集文章）
-    const brCount = (rawHTML.match(/<br\s*\/?>/gi) || []).length;
+    // 判断是否需要全文重构
+    const needsReformat = rawHTML.includes('<br') && 
+        article.querySelectorAll('h2, h3, pre').length === 0;
 
-    if (brCount >= 3) {
+    if (needsReformat) {
         // 全文重构
         article.innerHTML = formatFullArticle(rawHTML);
         if (btn) { btn.textContent = '✓ 排版完成'; btn.disabled = false; }
