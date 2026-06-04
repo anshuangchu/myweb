@@ -1,6 +1,6 @@
 <?php
 /**
- * 文章编辑表单视图
+ * 文章编辑表单视图（单栏布局 + 实时预览）
  *
  * 接收变量（由 article_edit.php 传入）:
  * @var array  $article      ['title','content','summary','category_id','cover_image','status']
@@ -48,61 +48,80 @@
                 <button type="button" class="ed-btn" onclick="insertImg()" title="插入图片">&#x1f5bc; 图片</button>
                 <button type="button" class="ed-btn" onclick="insertHR()" title="分割线">&#x2501;</button>
             </div>
+            <div style="flex:1"></div>
+            <button type="button" class="ed-btn ed-btn-accent" id="btnAiFormat" onclick="runAiFormat()" title="AI 智能排版">&#x2728; AI 排版</button>
+            <button type="button" class="ed-btn ed-btn-accent" onclick="togglePreview()" title="切换预览">&#x1f441; 预览</button>
         </div>
 
-        <!-- 编辑器 -->
+        <!-- 编辑器 + 预览 双栏 -->
         <div class="ed-area">
             <textarea name="content" id="editor" class="ed-textarea"
                       placeholder="开始写作... 使用上方按钮格式化文本"><?= htmlspecialchars($article['content']) ?></textarea>
+            <div class="ed-preview" id="previewPane">
+                <div class="ed-preview-inner article-content" id="previewContent"></div>
+            </div>
         </div>
 
         <!-- 底部操作栏 -->
         <div class="ed-foot">
             <button type="submit" class="btn btn-primary"><?= $id ? '保存修改' : '发布文章' ?></button>
             <a href="/myweb/admin/articles.php" class="btn">取消</a>
-            <span class="ed-foot-status">Ctrl+S 保存 | 选中文字后点击格式按钮</span>
+            <span class="ed-foot-status">Ctrl+S 保存 | 选中文字后点击格式按钮 | 编辑时自动预览</span>
         </div>
 
-        <!-- 右侧边栏 -->
-        <div class="ed-sidebar">
-            <!-- 发布设置 -->
-            <div class="es-card">
-                <div class="es-card-title">发布设置</div>
-                <div class="form-group"><label>状态</label>
-                <select name="status" class="e-select" style="width:100%">
-                    <?php foreach (ArticleStatus::ALL as $s): ?>
-                    <option value="<?= $s ?>" <?= $article['status'] === $s ? 'selected' : '' ?>>
-                        <?= ArticleStatus::label($s) ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select></div>
-                <div class="form-group"><label>分类</label>
-                <select name="category_id" class="e-select" style="width:100%">
-                    <option value="">无分类</option>
-                    <?php foreach ($categories as $c): ?>
-                    <option value="<?= $c['id'] ?>" <?= (int)$c['id'] === (int)$article['category_id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c['name']) ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select></div>
-            </div>
+        <!-- 文章设置（可折叠） -->
+        <div class="ed-settings">
+            <button type="button" class="ed-settings-toggle" onclick="toggleSettings()">
+                <span class="ed-settings-arrow" id="settingsArrow">&#x25b6;</span> 文章设置
+            </button>
+            <div class="ed-settings-body" id="settingsBody" style="display:none">
+                <div class="ed-settings-grid">
+                    <!-- 发布设置 -->
+                    <div class="es-card">
+                        <div class="es-card-title">发布设置</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>状态</label>
+                                <select name="status" class="e-select" style="width:100%">
+                                    <?php foreach (ArticleStatus::ALL as $s): ?>
+                                    <option value="<?= $s ?>" <?= $article['status'] === $s ? 'selected' : '' ?>>
+                                        <?= ArticleStatus::label($s) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>分类</label>
+                                <select name="category_id" class="e-select" style="width:100%">
+                                    <option value="">无分类</option>
+                                    <?php foreach ($categories as $c): ?>
+                                    <option value="<?= $c['id'] ?>" <?= (int)$c['id'] === (int)$article['category_id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['name']) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-            <!-- 标签输入 -->
-            <?= renderTagInput($articleTags, $allTags) ?>
+                    <!-- 封面图片 -->
+                    <div class="es-card">
+                        <div class="es-card-title">封面图片</div>
+                        <input type="file" name="cover_image" accept="image/*" style="font-size:0.82rem">
+                        <?php if ($article['cover_image']): ?>
+                        <img src="/myweb/<?= htmlspecialchars($article['cover_image']) ?>" alt="" style="max-width:200px;margin-top:8px;border-radius:8px;display:block">
+                        <?php endif; ?>
+                    </div>
 
-            <!-- 封面图片 -->
-            <div class="es-card">
-                <div class="es-card-title">封面图片</div>
-                <input type="file" name="cover_image" accept="image/*" style="font-size:0.82rem;width:100%">
-                <?php if ($article['cover_image']): ?>
-                <img src="/myweb/<?= htmlspecialchars($article['cover_image']) ?>" alt="" style="max-width:100%;margin-top:8px;border-radius:8px">
-                <?php endif; ?>
-            </div>
+                    <!-- 摘要 -->
+                    <div class="es-card">
+                        <div class="es-card-title">摘要</div>
+                        <textarea name="summary" rows="2" placeholder="可选（留空自动从正文提取前 200 字）" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem;resize:vertical"><?= htmlspecialchars($article['summary']) ?></textarea>
+                    </div>
 
-            <!-- 摘要 -->
-            <div class="es-card">
-                <div class="es-card-title">摘要</div>
-                <textarea name="summary" rows="2" placeholder="可选" style="width:100%;padding:8px;background:var(--gray-900);border:1px solid var(--gray-700);border-radius:6px;color:var(--gray-200);font-size:0.85rem;resize:vertical"><?= htmlspecialchars($article['summary']) ?></textarea>
+                    <!-- 标签 -->
+                    <?= renderTagInput($articleTags, $allTags) ?>
+                </div>
             </div>
         </div>
         </form>

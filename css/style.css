@@ -3459,3 +3459,128 @@ img.lazy-loaded { filter: blur(0); opacity: 1; }
   }
   .skeleton { animation: none !important; background: var(--gray-800); }
 }
+
+/* ===== 37. 文章编辑器 — 单栏布局 + 预览覆盖 ===== */
+
+/* 隐藏旧的固定侧边栏 */
+.ed-sidebar { display: none !important; }
+
+/* 预览窗格内部 */
+.ed-preview { display: block; }
+.ed-preview-inner { padding: 28px; min-height: 520px; }
+
+/* 预览空状态 */
+.ed-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  min-height: 520px;
+}
+
+/* 预览中的文章样式 */
+.ed-preview-inner img { max-width: 100%; height: auto; border-radius: var(--radius-md); }
+.ed-preview-inner pre {
+  background: linear-gradient(180deg, #0f1119 0%, #0d0f17 100%);
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  border: 1px solid var(--gray-700);
+  margin: var(--sp-4) 0;
+  font-size: 0.88rem;
+  line-height: 1.75;
+}
+.ed-preview-inner pre code { background: none; color: #d4d4df; font-family: var(--font-mono); }
+.ed-preview-inner blockquote {
+  margin: var(--sp-4) 0;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-6);
+  border-left: 4px solid var(--accent);
+  background: rgba(108,140,255,0.04);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--gray-300);
+}
+.ed-preview-inner .article-warn {
+  background: rgba(210,153,34,0.08);
+  border: 1px solid rgba(210,153,34,0.15);
+  border-left: 3px solid var(--warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--gray-200);
+  font-size: 0.92rem;
+}
+.ed-preview-inner table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ed-preview-inner th, .ed-preview-inner td { padding: 8px 12px; border: 1px solid var(--gray-700); text-align: left; }
+.ed-preview-inner th { background: var(--gray-850); font-weight: 600; }
+.ed-preview-inner hr { border: none; height: 1px; background: var(--gray-700); margin: var(--sp-4) 0; }
+.ed-preview-inner p { margin-bottom: var(--sp-4); line-height: 1.8; }
+.ed-preview-inner h2 { font-size: 1.4rem; font-weight: 700; margin: var(--sp-6) 0 var(--sp-3); padding-left: var(--sp-3); border-left: 4px solid var(--accent); }
+.ed-preview-inner h3 { font-size: 1.15rem; font-weight: 600; margin: var(--sp-5) 0 var(--sp-2); }
+.ed-preview-inner h4 { font-size: 1.05rem; font-weight: 600; margin: var(--sp-4) 0 var(--sp-2); }
+.ed-preview-inner ul, .ed-preview-inner ol { margin: var(--sp-3) 0; padding-left: var(--sp-6); }
+.ed-preview-inner a { color: var(--accent-light); text-decoration: none; }
+
+/* 隐藏预览时的布局 */
+.ed-area.preview-only { grid-template-columns: 1fr; }
+.ed-area.preview-only .ed-textarea { display: none; }
+.ed-area.preview-only .ed-preview { display: block; }
+
+/* 文章设置（可折叠） */
+.ed-settings {
+  margin-top: 16px;
+  border: 1px solid var(--gray-700);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ed-settings-toggle {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--gray-850);
+  border: none;
+  color: var(--gray-300);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+}
+.ed-settings-toggle:hover { background: var(--gray-800); color: var(--gray-100); }
+
+.ed-settings-arrow {
+  display: inline-block;
+  font-size: 0.65rem;
+  transition: transform 0.2s ease;
+  color: var(--gray-500);
+}
+.ed-settings-arrow.open { transform: rotate(90deg); }
+
+.ed-settings-body {
+  padding: 16px;
+  border-top: 1px solid var(--gray-700);
+  background: var(--gray-900);
+}
+
+.ed-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* 标签卡片占满宽 */
+.ed-settings-grid .es-card:has(.tag-chips),
+.ed-settings-grid .es-card:has(#tagInput) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1024px) {
+  .ed-area { grid-template-columns: 1fr; }
+  .ed-preview { display: none; }
+  .ed-textarea { border-right: none; }
+  .ed-settings-grid { grid-template-columns: 1fr; }
+}

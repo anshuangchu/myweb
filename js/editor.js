@@ -175,6 +175,43 @@
         renderTags();
     };
 
+    // ===== AI 排版 =====
+
+    window.runAiFormat = function() {
+        var content = ta.value;
+        if (!content.trim()) return;
+
+        var btn = document.getElementById('btnAiFormat');
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfMeta) return;
+
+        if (btn) { btn.textContent = '⏳ AI 排版中…'; btn.disabled = true; }
+
+        fetch('/myweb/ai_format.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'content=' + encodeURIComponent(content) + '&csrf_token=' + encodeURIComponent(csrfMeta.getAttribute('content'))
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.success && res.html) {
+                ta.value = res.html;
+                updatePreview();
+                if (btn) { btn.textContent = '✓ 排版完成'; btn.style.background = 'var(--success)'; btn.style.color = '#fff'; }
+            } else {
+                if (btn) { btn.textContent = '✗ 排版失败'; }
+            }
+        })
+        .catch(function() {
+            if (btn) { btn.textContent = '✗ 网络错误'; }
+        })
+        .finally(function() {
+            setTimeout(function() {
+                if (btn) { btn.textContent = '✨ AI 排版'; btn.disabled = false; btn.style.background = ''; btn.style.color = ''; }
+            }, 2500);
+        });
+    };
+
     // ===== 键盘快捷键 =====
 
     document.addEventListener('keydown', function(e) {
@@ -192,6 +229,47 @@
             tagInput.addEventListener('input', renderTags);
         }
     });
+
+    // ===== 实时预览 =====
+
+    var previewTimer = null;
+
+    function updatePreview() {
+        var content = ta.value;
+        var preview = document.getElementById('previewContent');
+        if (!preview) return;
+        if (!content.trim()) {
+            preview.innerHTML = '';
+            return;
+        }
+        preview.innerHTML = content;
+    }
+
+    ta.addEventListener('input', function() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(updatePreview, 300);
+    });
+
+    window.togglePreview = function() {
+        var area = document.querySelector('.ed-area');
+        var pane = document.getElementById('previewPane');
+        if (!area) return;
+        area.classList.toggle('preview-only');
+    };
+
+    // 初始渲染
+    if (ta.value.trim()) updatePreview();
+
+    // ===== 设置面板折叠 =====
+
+    window.toggleSettings = function() {
+        var body = document.getElementById('settingsBody');
+        var arrow = document.getElementById('settingsArrow');
+        if (!body || !arrow) return;
+        var isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        arrow.classList.toggle('open', !isOpen);
+    };
 
     // 暴露给 HTML onclick 属性
     window.wrap = wrap;
