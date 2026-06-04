@@ -113,7 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="editor-area" id="editorArea">
                         <textarea name="content" id="content" class="editor-textarea"
                                   placeholder="开始写作...&#10;&#10;支持 HTML 标签：<h2>标题</h2> <p>段落</p> <pre><code>代码</code></pre>&#10;粘贴纯文本可点击「✨ 排版」自动格式化"><?= htmlspecialchars($article['content']) ?></textarea>
-                        <div class="editor-preview article-content" id="editorPreview" style="display:none"></div>
+                        <div class="editor-preview" id="editorPreview" style="display:none">
+                            <div class="article-content-wrap"><div class="article-content"></div></div>
+                        </div>
                     </div>
 
                     <div class="editor-actions">
@@ -208,10 +210,10 @@ let aiResult = '', aiAction = '';
 // ===== 预览切换 =====
 function togglePreview() {
     const btn = document.getElementById('previewToggle');
+    const contentDiv = preview.querySelector('.article-content');
     if (preview.style.display === 'none') {
-        preview.innerHTML = ta.value || '<p style="color:var(--gray-500)">暂无内容</p>';
-        // 为预览中的 pre 标签添加语言标签
-        preview.querySelectorAll('pre').forEach(p => {
+        contentDiv.innerHTML = ta.value || '<p style="color:var(--gray-500)">暂无内容</p>';
+        contentDiv.querySelectorAll('pre').forEach(p => {
             if (!p.hasAttribute('data-lang')) p.setAttribute('data-lang','CODE');
         });
         preview.style.display = 'block';
