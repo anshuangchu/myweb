@@ -2235,6 +2235,110 @@ body {
   background: var(--gray-800);
 }
 
+/* ===== 22a. 编辑器 ===== */
+.editor-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  min-height: 500px;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-pane textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 500px;
+  padding: var(--sp-5);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  background: var(--gray-900);
+  color: var(--gray-100);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+}
+
+.editor-pane textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.editor-pane-right {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  padding: var(--sp-6);
+  overflow-y: auto;
+}
+
+.editor-pane-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--gray-700);
+}
+
+/* 格式工具栏 */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2);
+  background: var(--gray-850);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-sm);
+}
+
+.fmt-btn {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--gray-400);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.fmt-btn:hover {
+  background: var(--gray-800);
+  color: var(--gray-100);
+  border-color: var(--gray-700);
+}
+
+.fmt-spacer { flex: 1; }
+
+.fmt-ai {
+  background: var(--accent-subtle);
+  color: var(--accent-light);
+  border-color: rgba(108,140,255,0.2);
+}
+.fmt-ai:hover { background: var(--accent); color: #fff; }
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+}
+
+.editor-status {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-left: var(--sp-3);
+}
+
 /* ===== 22. 管理后台 ===== */
 .admin-layout {
   display: grid;

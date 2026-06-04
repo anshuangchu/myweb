@@ -11,7 +11,6 @@ if ($id) {
     $stmt->execute([$id]);
     $article = $stmt->fetch();
     if (!$article) redirect('/myweb/admin/articles.php');
-    // 加载已有标签
     $stmt = db()->prepare("SELECT t.id, t.name FROM tags t JOIN article_tags at ON t.id = at.tag_id WHERE at.article_id = ? ORDER BY t.name");
     $stmt->execute([$id]);
     $articleTags = $stmt->fetchAll();
@@ -19,7 +18,6 @@ if ($id) {
 
 $categories = db()->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 $allTags = db()->query("SELECT * FROM tags ORDER BY name")->fetchAll();
-
 $error = '';
 $success = '';
 
@@ -30,16 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $summary = trim($_POST['summary'] ?? '');
     $category_id = (int)($_POST['category_id'] ?? 0);
     $status = $_POST['status'] ?? 'draft';
-    $tagNames = $_POST['tags'] ?? []; // array of tag names
+    $tagNames = $_POST['tags'] ?? [];
 
-    // editor 不能直接发布，强制提交为待审核
     if (!hasRole('super_admin', 'admin') && $status === 'published') {
         $status = 'pending';
     }
-
     if (!$title) $error = '请输入文章标题';
 
-    // 处理封面图片上传
+    // 封面图片上传
     $cover_image = $article['cover_image'];
     if (!empty($_FILES['cover_image']['name'])) {
         if ($_FILES['cover_image']['size'] > 5 * 1024 * 1024) {
@@ -85,21 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $tagStmt->execute([$name]);
                     $tagIdStmt->execute([$name]);
                     $tagRow = $tagIdStmt->fetch();
-                    if ($tagRow) {
-                        $atStmt->execute([$id, $tagRow['id']]);
-                    }
+                    if ($tagRow) $atStmt->execute([$id, $tagRow['id']]);
                 }
             }
         }
-
         redirect('/myweb/admin/articles.php');
     }
 }
 ?>
-
-<style>
-.ai-panel { width: 280px; flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); position: sticky; top: 84px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto; }
-</style>
 
 <div class="admin-layout">
     <aside class="admin-sidebar"><?php require_once __DIR__ . '/../includes/admin_sidebar.php'; ?></aside>
@@ -108,30 +97,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="editor-form">
                 <h2><?= $id ? '编辑文章' : '写文章' ?></h2>
                 <?php if ($error): ?><div class="alert alert-error"><?= $error ?></div><?php endif; ?>
-                <?php if ($success): ?><div class="alert alert-success"><?= $success ?></div><?php endif; ?>
-                <form method="post" enctype="multipart/form-data">
+
+                <form method="post" enctype="multipart/form-data" id="articleForm">
                     <?= csrfField() ?>
                     <div class="form-group">
                         <label>标题</label>
-                        <input type="text" name="title" id="articleTitle" required value="<?= htmlspecialchars($article['title']) ?>">
+                        <input type="text" name="title" id="articleTitle" required value="<?= htmlspecialchars($article['title']) ?>" placeholder="输入文章标题...">
                     </div>
-                    <div class="form-group">
-                        <label>摘要</label>
-                        <textarea name="summary" id="articleSummary" rows="2"><?= htmlspecialchars($article['summary']) ?></textarea>
+
+                    <!-- 格式工具栏 -->
+                    <div class="editor-toolbar">
+                        <button type="button" class="fmt-btn" onclick="insertTag('h2', '标题')" title="二级标题">H2</button>
+                        <button type="button" class="fmt-btn" onclick="insertTag('h3', '子标题')" title="三级标题">H3</button>
+                        <button type="button" class="fmt-btn" onclick="insertTag('b', '粗体')" title="粗体"><b>B</b></button>
+                        <button type="button" class="fmt-btn" onclick="insertTag('code', '代码')" title="行内代码">&lt;/&gt;</button>
+                        <button type="button" class="fmt-btn" onclick="insertBlock('pre')" title="代码块">{ }</button>
+                        <button type="button" class="fmt-btn" onclick="insertBlock('blockquote')" title="引用">❝</button>
+                        <button type="button" class="fmt-btn" onclick="insertBlock('warn')" title="警告">⚠</button>
+                        <button type="button" class="fmt-btn" onclick="insertLink()" title="链接">🔗</button>
+                        <span class="fmt-spacer"></span>
+                        <button type="button" class="fmt-btn fmt-ai" onclick="aiFormatContent()" title="AI 自动排版">✨ AI排版</button>
                     </div>
+
                     <div class="form-group">
-                        <label>内容 (支持HTML)</label>
-                        <div class="editor-tabs">
-                            <button type="button" class="editor-tab active" data-tab="edit" onclick="switchEditorTab('edit')">✏️ 编辑</button>
-                            <button type="button" class="editor-tab" data-tab="preview" onclick="switchEditorTab('preview')">👁️ 预览</button>
-                        </div>
-                        <div class="editor-container">
-                            <textarea name="content" id="content" rows="15"><?= htmlspecialchars($article['content']) ?></textarea>
-                            <div id="previewArea" class="article-content-wrap" style="display:none;background:var(--bg-body);padding:24px 28px;min-height:300px">
+                        <label>内容</label>
+                        <div class="editor-panes">
+                            <div class="editor-pane editor-pane-left">
+                                <textarea name="content" id="content" rows="20" placeholder="开始写作...支持 HTML 标签"><?= htmlspecialchars($article['content']) ?></textarea>
+                            </div>
+                            <div class="editor-pane editor-pane-right" id="previewPane">
+                                <div class="editor-pane-label">预览</div>
                                 <div class="article-content" id="previewContent"></div>
                             </div>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label>摘要</label>
+                        <textarea name="summary" id="articleSummary" rows="2" placeholder="可选，留空自动取正文前200字"><?= htmlspecialchars($article['summary']) ?></textarea>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>分类</label>
@@ -151,13 +156,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <option value="archived" <?= $article['status']=='archived'?'selected':'' ?>>归档</option>
                             </select>
                             <?php if (!hasRole('super_admin', 'admin')): ?>
-                            <small style="color:var(--text-muted);display:block;margin-top:4px">提交后需要管理员审核才能发布</small>
+                            <small style="color:var(--gray-500);display:block;margin-top:4px">提交后需管理员审核</small>
                             <?php endif; ?>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label>标签</label>
-                        <input type="text" id="tagInput" placeholder="输入标签，空格或逗号分隔" value="<?= htmlspecialchars(implode(', ', array_column($articleTags, 'name'))) ?>" style="margin-bottom:6px">
+                        <input type="text" id="tagInput" placeholder="输入标签，空格或逗号分隔" value="<?= htmlspecialchars(implode(', ', array_column($articleTags, 'name'))) ?>">
                         <div id="tagHiddenContainer"></div>
                         <div id="tagChips" class="tag-chips">
                             <?php foreach ($articleTags as $t): ?>
@@ -166,63 +172,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <?php if (!empty($allTags)): ?>
                         <div class="tag-suggestions">
-                            <small style="color:var(--text-muted)">常用标签: </small>
+                            <small style="color:var(--gray-500)">常用: </small>
                             <?php foreach ($allTags as $t): ?>
                             <span class="tag tag-suggest" data-tag="<?= htmlspecialchars($t['name']) ?>" onclick="addTag('<?= htmlspecialchars($t['name'], ENT_QUOTES) ?>')"><?= htmlspecialchars($t['name']) ?></span>
                             <?php endforeach; ?>
                         </div>
                         <?php endif; ?>
                     </div>
+
                     <div class="form-group">
                         <label>封面图片</label>
                         <input type="file" name="cover_image" accept="image/*">
                         <?php if ($article['cover_image']): ?>
-                            <br><img src="/myweb/<?= $article['cover_image'] ?>" style="max-width:200px;margin-top:8px">
+                            <br><img src="/myweb/<?= $article['cover_image'] ?>" style="max-width:200px;margin-top:8px;border-radius:8px">
                         <?php endif; ?>
                     </div>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                    <a href="/myweb/admin/articles.php" class="btn">取消</a>
+
+                    <div class="editor-actions">
+                        <button type="submit" class="btn btn-primary">保存</button>
+                        <a href="/myweb/admin/articles.php" class="btn">取消</a>
+                        <span class="editor-status" id="editorStatus"></span>
+                    </div>
                 </form>
             </div>
 
+            <!-- AI 侧栏 -->
             <aside class="ai-panel">
-                <div class="ai-panel-header">
-                    <h3>✨ AI 助手</h3>
-                </div>
+                <div class="ai-panel-header"><h3>🤖 AI 助手</h3></div>
                 <div class="ai-panel-body">
                     <p class="ai-panel-desc">基于文章内容智能生成</p>
                     <div class="ai-actions">
-                        <button class="ai-btn" onclick="aiHelper('summarize')">
-                            <span class="ai-btn-icon">📝</span> 生成摘要
-                        </button>
-                        <button class="ai-btn" onclick="aiHelper('polish')">
-                            <span class="ai-btn-icon">✨</span> 润色全文
-                        </button>
-                        <button class="ai-btn" onclick="showExpandDialog()">
-                            <span class="ai-btn-icon">✍️</span> 续写内容
-                        </button>
-                        <div style="border-top:1px solid var(--border);margin:8px 0"></div>
-                        <button class="ai-btn" onclick="showGenerateDialog()" style="border-color:var(--accent)">
-                            <span class="ai-btn-icon">🌱</span> 全文生成
-                        </button>
-                        <button class="ai-btn" onclick="aiHelper('suggest_title')" style="border-color:var(--purple)">
-                            <span class="ai-btn-icon">🏆</span> 标题优化
-                        </button>
-                        <button class="ai-btn" onclick="localFormat()">
-                            <span class="ai-btn-icon">📐</span> 自动排版
-                        </button>
+                        <button class="ai-btn" onclick="aiHelper('summarize')">📝 生成摘要</button>
+                        <button class="ai-btn" onclick="aiHelper('polish')">✨ 润色全文</button>
+                        <button class="ai-btn" onclick="showExpandDialog()">✍️ 续写内容</button>
+                        <div style="border-top:1px solid var(--gray-700);margin:8px 0"></div>
+                        <button class="ai-btn" onclick="showGenerateDialog()" style="border-color:var(--accent)">🌱 全文生成</button>
+                        <button class="ai-btn" onclick="aiHelper('suggest_title')" style="border-color:var(--purple)">🏆 标题优化</button>
                     </div>
-
                     <div id="aiLoading" class="ai-loading" style="display:none">
-                        <div class="ai-spinner"></div>
-                        <span>AI 思考中…</span>
+                        <div class="ai-spinner"></div><span>AI 思考中…</span>
                     </div>
                     <div id="aiError" class="ai-error"></div>
-
                     <div id="aiResult" class="ai-result" style="display:none">
                         <div class="ai-result-header">
                             <span id="aiResultLabel"></span>
-                            <button class="ai-insert-btn" onclick="aiInsertResult()">插入结果</button>
+                            <button class="ai-insert-btn" onclick="aiInsertResult()">插入</button>
                         </div>
                         <div id="aiResultContent" class="ai-result-content"></div>
                     </div>
@@ -236,89 +230,137 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 let aiLastResult = '';
 let aiLastAction = '';
 
-// 本地排版 — 不动原文文字，仅清理 HTML 结构
-function localFormat() {
+// ===== 实时预览 =====
+const contentArea = document.getElementById('content');
+const previewArea = document.getElementById('previewContent');
+function updatePreview() {
+    previewArea.innerHTML = contentArea.value;
+}
+contentArea.addEventListener('input', updatePreview);
+updatePreview();
+
+// ===== 格式工具栏 =====
+function insertTag(tag, placeholder) {
+    const ta = contentArea;
+    const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd) || placeholder;
+    let open, close;
+    switch(tag) {
+        case 'h2': open='<h2>'; close='</h2>'; break;
+        case 'h3': open='<h3>'; close='</h3>'; break;
+        case 'b': open='<strong>'; close='</strong>'; break;
+        case 'code': open='<code>'; close='</code>'; break;
+        default: open='<'+tag+'>'; close='</'+tag+'>';
+    }
+    const before = ta.value.substring(0, ta.selectionStart);
+    const after = ta.value.substring(ta.selectionEnd);
+    ta.value = before + open + sel + close + after;
+    ta.focus();
+    ta.setSelectionRange(before.length + open.length, before.length + open.length + sel.length);
+    updatePreview();
+}
+
+function insertBlock(type) {
+    const ta = contentArea;
+    const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd) || '内容';
+    let html;
+    switch(type) {
+        case 'pre': html = '<pre><code>' + sel + '</code></pre>'; break;
+        case 'blockquote': html = '<blockquote><p>' + sel + '</p></blockquote>'; break;
+        case 'warn': html = '<p class="article-warn">' + sel + '</p>'; break;
+        default: html = sel;
+    }
+    const before = ta.value.substring(0, ta.selectionStart);
+    const after = ta.value.substring(ta.selectionEnd);
+    ta.value = before + '\n' + html + '\n' + after;
+    ta.focus();
+    updatePreview();
+}
+
+function insertLink() {
+    const url = prompt('输入链接地址:', 'https://');
+    if (!url) return;
+    const ta = contentArea;
+    const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd) || url;
+    const html = '<a href="' + url + '" target="_blank">' + sel + '</a>';
+    const before = ta.value.substring(0, ta.selectionStart);
+    const after = ta.value.substring(ta.selectionEnd);
+    ta.value = before + html + after;
+    ta.focus();
+    updatePreview();
+}
+
+// ===== AI 排版 =====
+function aiFormatContent() {
+    const ta = contentArea;
+    if (!ta.value.trim()) return;
+    const btn = document.querySelector('.fmt-ai');
+    btn.textContent = '⏳'; btn.disabled = true;
+    const title = document.getElementById('articleTitle').value;
+
+    fetch('/myweb/ai_format.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'content=' + encodeURIComponent(ta.value) + '&title=' + encodeURIComponent(title) + '&csrf_token=' + document.querySelector('[name=csrf_token]').value
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success && res.html) {
+            ta.value = res.html;
+            updatePreview();
+            btn.textContent = '✓'; btn.style.background = 'var(--success)'; btn.style.color = '#fff';
+        } else {
+            // 本地排版兜底
+            localFormatFallback();
+            btn.textContent = '✓';
+        }
+    })
+    .catch(() => {
+        localFormatFallback();
+        btn.textContent = '✓';
+    })
+    .finally(() => {
+        setTimeout(() => { btn.textContent = '✨ AI排版'; btn.disabled = false; btn.style.background = ''; btn.style.color = ''; }, 2000);
+    });
+}
+
+function localFormatFallback() {
     const ta = document.getElementById('content');
     let html = ta.value;
     if (!html.trim()) return;
-
-    document.getElementById('aiLoading').style.display = 'flex';
-    document.getElementById('aiResult').style.display = 'none';
-    document.getElementById('aiError').style.display = 'none';
-
-    // 使用 setTimeout 让 loading 先渲染出来
-    setTimeout(() => {
-        const original = html;
-
-        // 1. 去掉超过 2 行的连续空行
-        html = html.replace(/\n{3,}/g, '\n\n');
-
-        // 2. 去掉行首尾的空白
-        html = html.replace(/^[ \t]+/gm, '');
-        html = html.replace(/[ \t]+$/gm, '');
-
-        // 3. 解析成块，将裸文本（无 HTML 标签的段落）用 <p> 包裹
-        const blocks = html.split(/\n\n+/);
-        const out = [];
-        for (const block of blocks) {
-            const b = block.trim();
-            if (!b) continue;
-            // 如果块内没有 HTML 标签，视为纯文本段落
-            if (!/<[\w\/]/.test(b)) {
-                // 块内换行转 <br>
-                out.push('<p>' + b.replace(/\n/g, '<br>') + '</p>');
-            } else {
-                out.push(b);
-            }
+    // 简单清洗
+    html = html.replace(/\n{3,}/g, '\n\n');
+    const blocks = html.split(/\n\n+/);
+    const out = [];
+    for (const block of blocks) {
+        const b = block.trim();
+        if (!b) continue;
+        if (!/<[\w\/]/.test(b)) {
+            out.push('<p>' + b.replace(/\n/g, '<br>') + '</p>');
+        } else {
+            out.push(b);
         }
-        html = out.join('\n\n');
-
-        // 4. 清理空 <p> 标签
-        html = html.replace(/<p>\s*<\/p>/g, '');
-
-        // 5. 确保 <p> 之间没有多余空行
-        html = html.replace(/(<\/p>)\s*\n\s*(<p>)/g, '$1\n$2');
-
-        // 如果结果没变，提示
-        if (html === original) {
-            document.getElementById('aiLoading').style.display = 'none';
-            showAiError('内容已是最佳格式，无需调整');
-            return;
-        }
-
-        ta.value = html;
-        document.getElementById('aiLoading').style.display = 'none';
-        document.getElementById('aiResultLabel').textContent = '📐 自动排版';
-        document.getElementById('aiResultContent').textContent = '排版完成，内容无丢失 ✓';
-        aiLastResult = html;
-        aiLastAction = 'format';
-        document.getElementById('aiResult').style.display = 'block';
-    }, 100);
+    }
+    ta.value = out.join('\n\n').replace(/<p>\s*<\/p>/g, '');
+    updatePreview();
 }
 
+// ===== AI 辅助 =====
 function aiHelper(action) {
-    const content = document.getElementById('content').value;
-    if (!content.trim()) {
-        showAiError('请先填写文章内容');
-        return;
-    }
-
+    const content = contentArea.value;
+    if (!content.trim()) { showAiError('请先填写内容'); return; }
     const title = document.getElementById('articleTitle').value;
-    const labels = { summarize: '📝 生成摘要', polish: '✨ 润色全文', expand: '✍️ 续写内容', generate: '🌱 全文生成', suggest_title: '🏆 标题优化' };
+    const labels = { summarize: '📝 摘要', polish: '✨ 润色', suggest_title: '🏆 标题' };
     aiLastAction = action;
-
     document.getElementById('aiLoading').style.display = 'flex';
     document.getElementById('aiResult').style.display = 'none';
     document.getElementById('aiError').style.display = 'none';
     document.getElementById('aiResultLabel').textContent = labels[action] || action;
-
-    // 禁用所有按钮
     document.querySelectorAll('.ai-btn').forEach(b => b.disabled = true);
 
     fetch('/myweb/admin/ai_helper.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=' + encodeURIComponent(action) + '&content=' + encodeURIComponent(content) + '&title=' + encodeURIComponent(title)
+        body: 'action=' + action + '&content=' + encodeURIComponent(content) + '&title=' + encodeURIComponent(title)
     })
     .then(r => r.json())
     .then(res => {
@@ -328,14 +370,12 @@ function aiHelper(action) {
             aiLastResult = res.data;
             document.getElementById('aiResultContent').textContent = res.data;
             document.getElementById('aiResult').style.display = 'block';
-        } else {
-            showAiError(res.error || '操作失败，请重试');
-        }
+        } else { showAiError(res.error || '失败'); }
     })
     .catch(err => {
         document.getElementById('aiLoading').style.display = 'none';
         document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
-        showAiError('网络错误: ' + err.message);
+        showAiError('网络错误');
     });
 }
 
@@ -346,60 +386,47 @@ function showAiError(msg) {
 }
 
 function aiInsertResult() {
-    if (aiLastAction === 'format') {
-        document.getElementById('content').value = aiLastResult;
-    } else if (aiLastAction === 'summarize') {
-        document.querySelector('textarea[name="summary"]').value = aiLastResult;
+    if (aiLastAction === 'summarize') {
+        document.getElementById('articleSummary').value = aiLastResult;
     } else if (aiLastAction === 'generate') {
-        if (aiLastResult && aiLastResult.title) {
-            document.querySelector('input[name="title"]').value = aiLastResult.title;
-            if (aiLastResult.summary) document.querySelector('textarea[name="summary"]').value = aiLastResult.summary;
-            if (aiLastResult.content) document.getElementById('content').value = aiLastResult.content;
-            alert('文章已生成完毕 ✓');
+        if (aiLastResult?.title) {
+            document.getElementById('articleTitle').value = aiLastResult.title;
+            if (aiLastResult.summary) document.getElementById('articleSummary').value = aiLastResult.summary;
+            if (aiLastResult.content) { contentArea.value = aiLastResult.content; updatePreview(); }
         }
     } else if (aiLastAction === 'suggest_title') {
-        // 显示候选标题弹窗
         const titles = aiLastResult.split('\n').filter(t => t.trim());
-        let msg = 'AI 推荐标题：\n';
-        titles.forEach((t, i) => { msg += '\n' + (i+1) + '. ' + t.replace(/^\d+[.、\s)]*\s*/, ''); });
-        msg += '\n\n请输入编号选择要使用的标题（1-' + titles.length + '），或取消';
+        let msg = '选择标题:\n' + titles.map((t,i) => (i+1)+'. '+t.replace(/^\d+[.、\s)]*\s*/, '')).join('\n');
         const choice = prompt(msg, '1');
         if (choice) {
             const idx = parseInt(choice) - 1;
             if (idx >= 0 && idx < titles.length) {
-                const selected = titles[idx].replace(/^\d+[.、\s)]*\s*/, '');
-                document.querySelector('input[name="title"]').value = selected;
-            } else {
-                alert('无效选择');
+                document.getElementById('articleTitle').value = titles[idx].replace(/^\d+[.、\s)]*\s*/, '');
             }
         }
     } else {
-        const ta = document.getElementById('content');
-        const pos = ta.selectionStart;
-        ta.value = ta.value.slice(0, pos) + '\n' + aiLastResult + '\n' + ta.value.slice(pos);
+        const pos = contentArea.selectionStart;
+        contentArea.value = contentArea.value.slice(0, pos) + '\n' + aiLastResult + '\n' + contentArea.value.slice(pos);
+        updatePreview();
     }
     document.getElementById('aiResult').style.display = 'none';
 }
 
-// 续写内容弹窗 — 选择长度
 function showExpandDialog() {
-    const content = document.getElementById('content').value;
-    if (!content.trim()) { showAiError('请先填写文章内容'); return; }
-    const choice = prompt('选择续写长度：\n1. 短 (50-100字)\n2. 中 (100-200字)\n3. 长 (200-400字)', '2');
+    if (!contentArea.value.trim()) { showAiError('请先填写内容'); return; }
+    const choice = prompt('续写长度:\n1.短 2.中 3.长', '2');
     if (!choice) return;
-    const map = { '1': 'short', '2': 'medium', '3': 'long' };
-    const length = map[choice] || 'medium';
-    aiHelperExpand(length);
+    const map = {'1':'short','2':'medium','3':'long'};
+    expandContent(map[choice] || 'medium');
 }
 
-function aiHelperExpand(length) {
-    const content = document.getElementById('content').value;
+function expandContent(length) {
+    const content = contentArea.value;
     const title = document.getElementById('articleTitle').value;
     aiLastAction = 'expand';
     document.getElementById('aiLoading').style.display = 'flex';
     document.getElementById('aiResult').style.display = 'none';
-    document.getElementById('aiError').style.display = 'none';
-    document.getElementById('aiResultLabel').textContent = '✍️ 续写内容';
+    document.getElementById('aiResultLabel').textContent = '✍️ 续写';
     document.querySelectorAll('.ai-btn').forEach(b => b.disabled = true);
 
     fetch('/myweb/admin/ai_helper.php', {
@@ -415,39 +442,32 @@ function aiHelperExpand(length) {
             aiLastResult = res.data;
             document.getElementById('aiResultContent').textContent = res.data;
             document.getElementById('aiResult').style.display = 'block';
-        } else {
-            showAiError(res.error || '操作失败');
-        }
+        } else { showAiError(res.error || '失败'); }
     })
     .catch(err => {
         document.getElementById('aiLoading').style.display = 'none';
         document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
-        showAiError('网络错误: ' + err.message);
+        showAiError('网络错误');
     });
 }
 
-// 全文生成弹窗
 function showGenerateDialog() {
-    const topic = prompt('请输入文章主题（一句话描述）：\n\n例如：树莓派搭建个人云存储', '');
+    const topic = prompt('文章主题:', '');
     if (!topic) return;
-    const style = prompt('选择文章风格：\n1. 通用 (默认)\n2. 正式专业\n3. 轻松口语\n4. 技术教程', '1');
+    const style = prompt('风格: 1.通用 2.正式 3.口语 4.教程', '1');
     if (!style) return;
-    const styleMap = { '1': 'general', '2': 'formal', '3': 'casual', '4': 'tech' };
-    doGenerate(topic, styleMap[style] || 'general');
-}
+    const map = {'1':'general','2':'formal','3':'casual','4':'tech'};
 
-function doGenerate(topic, style) {
     aiLastAction = 'generate';
     document.getElementById('aiLoading').style.display = 'flex';
     document.getElementById('aiResult').style.display = 'none';
-    document.getElementById('aiError').style.display = 'none';
-    document.getElementById('aiResultLabel').textContent = '🌱 全文生成';
+    document.getElementById('aiResultLabel').textContent = '🌱 生成';
     document.querySelectorAll('.ai-btn').forEach(b => b.disabled = true);
 
     fetch('/myweb/admin/ai_helper.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=generate&content=' + encodeURIComponent(topic) + '&style=' + style
+        body: 'action=generate&content=' + encodeURIComponent(topic) + '&style=' + (map[style]||'general')
     })
     .then(r => r.json())
     .then(res => {
@@ -455,85 +475,41 @@ function doGenerate(topic, style) {
         document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
         if (res.success) {
             aiLastResult = res.data;
-            // 如果是对象则显示摘要信息
-            if (typeof res.data === 'object' && res.data.title) {
-                document.getElementById('aiResultContent').textContent = '标题：' + res.data.title + '\n\n摘要：' + (res.data.summary || '无') + '\n\n正文长度：' + (res.data.content || '').length + ' 字';
-            } else if (typeof res.data === 'string') {
-                document.getElementById('aiResultContent').textContent = res.data;
-            } else {
-                document.getElementById('aiResultContent').textContent = JSON.stringify(res.data);
-            }
+            document.getElementById('aiResultContent').textContent = typeof res.data === 'object' ? ('标题:'+res.data.title+'\n\n'+res.data.content) : res.data;
             document.getElementById('aiResult').style.display = 'block';
-        } else {
-            showAiError(res.error || '操作失败');
-        }
+        } else { showAiError(res.error || '失败'); }
     })
     .catch(err => {
         document.getElementById('aiLoading').style.display = 'none';
         document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
-        showAiError('网络错误: ' + err.message);
+        showAiError('网络错误');
     });
 }
 
-// 编辑/预览切换
-function switchEditorTab(tab) {
-    document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector('.editor-tab[data-tab="' + tab + '"]').classList.add('active');
-    const textarea = document.getElementById('content');
-    const preview = document.getElementById('previewArea');
-    if (tab === 'edit') {
-        textarea.style.display = 'block';
-        preview.style.display = 'none';
-    } else {
-        textarea.style.display = 'none';
-        preview.style.display = 'block';
-        document.getElementById('previewContent').innerHTML = textarea.value;
-    }
-}
-
-// ===== 标签管理 =====
-function parseTags(str) {
-    return str.split(/[,\s]+/).map(t => t.trim()).filter(t => t.length > 0);
-}
-
+// ===== 标签 =====
+function parseTags(str) { return str.split(/[,\s]+/).map(t => t.trim()).filter(t => t); }
 function renderTagChips() {
     const input = document.getElementById('tagInput');
     const container = document.getElementById('tagChips');
-    const hiddenContainer = document.getElementById('tagHiddenContainer');
-    const tags = parseTags(input.value);
-    // 去重
-    const unique = [];
-    const seen = {};
-    tags.forEach(t => { if (!seen[t]) { seen[t] = true; unique.push(t); } });
-    container.innerHTML = unique.map(t => '<span class="tag tag-selected" data-tag="' + t.replace(/"/g, '&quot;') + '" onclick="removeTag(\'' + t.replace(/'/g, "\\'") + '\')">' + t + ' ✕</span>').join('');
-    // 写入 hidden inputs
-    hiddenContainer.innerHTML = unique.map(t => '<input type="hidden" name="tags[]" value="' + t.replace(/"/g, '&quot;') + '">').join('');
+    const hidden = document.getElementById('tagHiddenContainer');
+    const tags = [...new Set(parseTags(input.value))];
+    container.innerHTML = tags.map(t => '<span class="tag tag-selected" onclick="removeTag(\'' + t.replace(/'/g,"\\'") + '\')">' + t + ' ✕</span>').join('');
+    hidden.innerHTML = tags.map(t => '<input type="hidden" name="tags[]" value="' + t.replace(/"/g,'&quot;') + '">').join('');
 }
-
-function addTag(name) {
-    const input = document.getElementById('tagInput');
-    const existing = parseTags(input.value);
-    if (existing.indexOf(name) === -1) {
-        existing.push(name);
-        input.value = existing.join(', ');
-        renderTagChips();
-    }
-}
-
-function removeTag(name) {
-    const input = document.getElementById('tagInput');
-    const tags = parseTags(input.value).filter(t => t !== name);
-    input.value = tags.join(', ');
+function addTag(name) { const i = document.getElementById('tagInput'); const t = parseTags(i.value); if (!t.includes(name)) { t.push(name); i.value = t.join(', '); renderTagChips(); } }
+function removeTag(name) { const i = document.getElementById('tagInput'); i.value = parseTags(i.value).filter(t => t !== name).join(', '); renderTagChips(); }
+document.addEventListener('DOMContentLoaded', () => {
     renderTagChips();
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // 同步 tag hidden inputs
-    renderTagChips();
-    // 输入时实时同步
     document.getElementById('tagInput').addEventListener('input', renderTagChips);
-    // 点击 tag-suggest 防重复标注（已由全局 addTag 处理）
+});
+
+// ===== 快捷键 =====
+contentArea.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('editorStatus').textContent = '已保存';
+        setTimeout(() => document.getElementById('editorStatus').textContent = '', 2000);
+    }
 });
 </script>
-<script src="/myweb/js/editor.js" defer></script>
 <?php require_once '../includes/footer.php'; ?>
