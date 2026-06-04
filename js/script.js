@@ -4,96 +4,123 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-// ===== 代码块自动识别与格式化 =====
-(function autoFormatCode() {
+// ===== 文章自动排版优化 =====
+(function autoFormatArticle() {
     const article = document.querySelector('.article-content');
     if (!article) return;
 
-    // 已有 pre 标签的，直接识别语言
+    // 1. 已有 pre 标签识别语言
     article.querySelectorAll('pre').forEach(pre => {
         if (pre.hasAttribute('data-lang')) return;
-        const text = pre.textContent.slice(0, 200);
-        pre.setAttribute('data-lang', detectLang(text));
+        pre.setAttribute('data-lang', detectLang(pre.textContent.slice(0, 300)));
     });
 
-    // 处理纯文本中的代码行（<br>分隔的代码块）
-    const paras = article.querySelectorAll('p');
-    paras.forEach(p => {
+    // 2. 处理 <br> 分隔的段落
+    article.querySelectorAll('p').forEach(p => {
         const html = p.innerHTML;
-        // 如果段落包含大量 <br> 且含代码特征
-        if (!html.includes('<br') && !html.includes('<br/>')) return;
+        if (!html.includes('<br')) return;
 
-        const lines = html.split(/<br\s*\/?>/i);
-        if (lines.length < 3) return;
+        const rawLines = html.split(/<br\s*\/?>/i);
+        const lines = rawLines.map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) return;
 
-        const coded = lines.map(l => ({ text: l.trim(), isCode: isCodeLine(l) }));
+        // 分类每一行
+        const items = lines.map(l => classifyLine(l));
 
-        // 查找连续 >=2 行的代码块
-        let fragments = [];
-        let buf = [];
-        let bufIsCode = null;
-
-        for (const item of coded) {
-            if (bufIsCode === null) {
-                bufIsCode = item.isCode;
-                buf.push(item.text);
-            } else if (item.isCode === bufIsCode) {
-                buf.push(item.text);
+        // 合并连续同类项
+        const groups = [];
+        for (const item of items) {
+            const last = groups[groups.length - 1];
+            if (last && last.type === item.type) {
+                last.content.push(item.raw);
             } else {
-                fragments.push({ isCode: bufIsCode, lines: buf });
-                buf = [item.text];
-                bufIsCode = item.isCode;
+                groups.push({ type: item.type, content: [item.raw] });
             }
         }
-        if (buf.length) fragments.push({ isCode: bufIsCode, lines: buf });
 
-        // 只处理有 >=2 行代码的块
-        const hasCodeBlock = fragments.some(f => f.isCode && f.lines.length >= 2);
-        if (!hasCodeBlock) return;
-
-        // 重建 HTML
+        // 生成输出
         let out = '';
-        for (const frag of fragments) {
-            if (frag.isCode && frag.lines.length >= 2) {
-                const codeText = frag.lines.join('\n');
-                const lang = detectLang(codeText);
-                out += '<pre data-lang="' + lang + '"><code>' + escHtml(codeText) + '</code></pre>';
-            } else {
-                out += '<p>' + frag.lines.join('<br>') + '</p>';
+        for (const g of groups) {
+            const text = g.content.join('\n');
+            switch (g.type) {
+                case 'code':
+                    out += '<pre data-lang="' + detectLang(text) + '"><code>' + escHtml(text) + '</code></pre>';
+                    break;
+                case 'h3':
+                    out += '<h3>' + formatInline(text) + '</h3>';
+                    break;
+                case 'h4':
+                    out += '<h4>' + formatInline(text) + '</h4>';
+                    break;
+                case 'warn':
+                    out += '<p class="article-warn">' + formatInline(text.replace(/^⚠️?\s*/, '')) + '</p>';
+                    break;
+                default:
+                    out += '<p>' + formatInline(g.content.join('<br>')) + '</p>';
             }
         }
         p.insertAdjacentHTML('beforebegin', out);
         p.remove();
     });
 
-    function isCodeLine(line) {
-        const t = line.trim();
-        if (!t) return false;
-        // 排除纯文字标题行
+    // 3. 处理单段落的格式增强
+    article.querySelectorAll('p').forEach(p => {
+        if (p.querySelector('br')) return;
+        p.innerHTML = formatInline(p.innerHTML);
+    });
+
+    // ===== 分类函数 =====
+    function classifyLine(t) {
+        // 标题行
+        if (/^第[一二三四五六七八九十\d]+[阶段章节部]/.test(t)) return { type: 'h3', raw: t };
+        if (/^[一二三四五六七八九十\d]+[、．.]\s/.test(t)) return { type: 'h3', raw: t };
+        if (/^\d+\.\d+\s/.test(t)) return { type: 'h4', raw: t };
+
+        // 警告行
+        if (/^⚠/.test(t)) return { type: 'warn', raw: t };
+
+        // 代码行
+        if (isCodeLine(t)) return { type: 'code', raw: t };
+
+        return { type: 'text', raw: t };
+    }
+
+    function isCodeLine(t) {
+        if (!t || t.length > 200) return false;  // 超长行不是代码
+        // 排除标题/说明行
         if (/^(Windows|macOS|Linux|Ubuntu|CentOS)(\s|$)/i.test(t) && t.length < 30) return false;
         if (/^(Windows|Mac|Linux).*(PowerShell|CMD|命令|终端|Bash|Zsh|用户)/i.test(t)) return false;
-
+        if (/^(注意|提示|推荐|安装方式|方式[一二三]|第[一二三]步)/.test(t)) return false;
+        // 大于3行的段落里，非中文为主的可能是代码
+        // 命令特征
         return /^(npm |git |curl |wget |sudo |apt |brew |pip |node |yarn |npx |export |set |unset |source |\.\/|mkdir |cd |ls |cp |mv |rm |cat |echo |chmod |chown |docker |kubectl |go |rustc |python |php |java |gcc |make |nvm |claude |code |dir |copy |del |type |where |cls |reg |tasklist |systemctl |scp |ssh )/i.test(t)
             || /^\$env:/i.test(t)
             || /^\$[\s(]/.test(t)
-            || /^>\s/.test(t)
             || /^#\s(?!.*配置|.*阶段|.*注意|.*推荐|.*用户)/.test(t)
             || /^[a-zA-Z0-9._-]+[>$]\s/.test(t)
             || /^\$\w+\s*=/.test(t)
-            || /^\w+\s*[:=]\s*["']/.test(t)
-            || /^[{}[\]]\s*$/.test(t);
+            || /^[a-zA-Z_]\w*\s*[:=]\s*["']/.test(t)
+            || /^\s*(import |from |def |class |const |let |var |function |return |if |for |while )/.test(t);
     }
 
     function detectLang(text) {
         const t = text.slice(0, 300);
-        if (/\b(npm |git |curl |sudo |apt |brew |\.\/|export |source |chmod |nvm )/.test(t)) return 'BASH';
-        if (/^\$env:/m.test(t) || /\$\w+\s*=|Get-\w+|Write-\w+/.test(t)) return 'PowerShell';
-        if (/\b(set |dir |copy |del |mkdir |cd |echo |cls |type )/i.test(t)) return 'CMD';
-        if (/\b(def |import |print\(|from \w+ import|class \w+.*:)/.test(t)) return 'Python';
-        if (/\b(const |let |var |function\s+\w+\s*\(|=>|console\.log)/.test(t)) return 'JavaScript';
-        if (/\b(SELECT |INSERT |UPDATE |DELETE |CREATE TABLE)/i.test(t)) return 'SQL';
-        if (/[\w-]+\s*:\s*[\w#]+;|@media/.test(t)) return 'CSS';
+        if (/\b(npm |git |curl |sudo |apt |brew |\.\/|export |source |chmod |nvm |make )/.test(t)) return 'BASH';
+        if (/^\$env:/m.test(t)) return 'PowerShell';
+        if (/\b(set |dir |copy |del |mkdir |cd |echo |cls |type |reg )/i.test(t)) return 'CMD';
+        if (/\b(def |import |print\(|from \w+ import|class \w+.*:|elif |except )/.test(t)) return 'Python';
+        if (/\b(const |let |var |function\s+\w+\s*\(|=>|console\.log|import\s)/.test(t)) return 'JavaScript';
+        if (/\b(SELECT |INSERT |UPDATE |DELETE |CREATE TABLE|ALTER TABLE)/i.test(t)) return 'SQL';
+        if (/[\w-]+\s*:\s*[\w#]+;|@media|@keyframes/.test(t)) return 'CSS';
         return 'CODE';
+    }
+
+    // ===== 行内格式化 =====
+    function formatInline(text) {
+        return text
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
     }
 
     function escHtml(s) {

@@ -1220,9 +1220,15 @@ body {
 
 .article-content blockquote p { margin-bottom: 0; }
 
-/* 注意/警告段落 */
-.article-content p:has(strong:first-child) {
-  /* 自动检测 ⚠️ 注意 类型的段落不作特殊处理 */;
+/* 警告段落 */
+.article-warn {
+  background: rgba(210,153,34,0.08);
+  border: 1px solid rgba(210,153,34,0.15);
+  border-left: 3px solid var(--warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: var(--sp-4) var(--sp-5);
+  color: var(--gray-200);
+  font-size: 0.92rem;
 }
 
 .article-content ul, .article-content ol {
