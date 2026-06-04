@@ -75,8 +75,6 @@ $recentSidebar = db()->query("SELECT id, title, created_at, views FROM articles 
                 <span><?= htmlspecialchars($fa['username']) ?></span>
                 <span class="meta-dot">·</span>
                 <span><?= date('m-d', strtotime($fa['created_at'])) ?></span>
-                <span class="meta-dot">·</span>
-                <span><?= $fReading ?> 分钟</span>
             </div>
         </div>
     </div>
@@ -151,7 +149,6 @@ $recentSidebar = db()->query("SELECT id, title, created_at, views FROM articles 
                             <div class="article-card-meta">
                                 <span><?= htmlspecialchars($article['username']) ?></span>
                                 <span><?= date('Y-m-d', strtotime($article['created_at'])) ?></span>
-                                <span><?= $readingTime ?> 分钟</span>
                                 <span><?= $article['views'] ?> 次阅读</span>
                             </div>
                         </div>
