@@ -1,0 +1,8 @@
+uploads/
+.vscode/
+.idea/
+*.tmp
+.claude/
+.reasonix/
+*.tar.gz
+desktop.ini
