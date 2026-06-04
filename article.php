@@ -115,13 +115,6 @@ $coverUrl = $article['cover_image'] ? ('/myweb/' . $article['cover_image']) : ''
     </div>
     <?php endif; ?>
 
-    <div class="article-toolbar">
-        <button class="btn-format" id="btnAutoFormat" onclick="runAutoFormat()" title="自动识别标题、代码块、警告并排版">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-            自动排版
-        </button>
-    </div>
-
     <div class="article-content-wrap">
         <div class="article-content">
             <?= $article['content'] ?>
