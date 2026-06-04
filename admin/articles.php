@@ -2,6 +2,9 @@
 require_once '../includes/header.php';
 if (!hasRole('super_admin', 'admin', 'editor')) redirect('/myweb/login.php?redirect=/myweb/admin/articles.php');
 
+require_once __DIR__ . '/../includes/article_service.php';
+require_once __DIR__ . '/../includes/article_validation.php';
+
 // POST 处理（在输出 HTML 之前处理，确保 redirect 正常工作）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && hasRole('super_admin', 'admin')) {
     verifyCsrf();
@@ -19,24 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && hasRole('super_admin', 'admin')) {
     }
 }
 
-$sort = $_GET['sort'] ?? 'date';
-$order = sortField($sort);
+$sort   = $_GET['sort'] ?? 'date';
+$page   = max(1, (int)($_GET['page'] ?? 1));
+$result = ArticleService::getAdminArticles($sort, $page);
 
-$page = max(1, (int)($_GET['page'] ?? 1));
-$perPage = 20;
-$totalStmt = db()->query("SELECT COUNT(*) FROM articles");
-$totalArticles = (int)$totalStmt->fetchColumn();
-$totalPages = (int) max(1, ceil($totalArticles / $perPage));
-$page = (int) min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-
-$stmt = db()->query("SELECT a.*, u.username, c.name as category_name
-    FROM articles a
-    LEFT JOIN users u ON a.author_id = u.id
-    LEFT JOIN categories c ON a.category_id = c.id
-    ORDER BY $order
-    LIMIT $perPage OFFSET $offset");
-$articles = $stmt->fetchAll();
+$articles   = $result['articles'];
+$totalPages = $result['totalPages'];
+$page       = $result['page'];
 ?>
 
 <div class="admin-layout">
@@ -63,7 +55,7 @@ $articles = $stmt->fetchAll();
                     <td><?= htmlspecialchars($a['username']) ?></td>
                     <td><?= htmlspecialchars($a['category_name'] ?? '-') ?></td>
                     <td><?= $a['views'] ?></td>
-                    <td><span class="badge badge-<?= $a['status'] ?>"><?= $a['status'] ?></span></td>
+                    <td><span class="badge badge-<?= htmlspecialchars($a['status']) ?>"><?= ArticleStatus::label($a['status']) ?></span></td>
                     <td><?= date('Y-m-d', strtotime($a['created_at'])) ?></td>
                     <td>
                         <a href="/myweb/admin/article_edit.php?id=<?= $a['id'] ?>" class="btn-sm">编辑</a>

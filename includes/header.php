@@ -12,7 +12,7 @@ session_start();
 require_once __DIR__ . '/db_loader.php';
 
 // 批量加载站点设置（带 session 缓存）
-$settingsVersion = (int) db()->query("SELECT value FROM settings WHERE key_name = '_version'")->fetchColumn();
+$settingsVersion = (int) (db()->query("SELECT value FROM settings WHERE key_name = '_version'")->fetchColumn() ?: 0);
 if (empty($_SESSION['settings_cache']) || ($_SESSION['settings_cache_version'] ?? 0) !== $settingsVersion) {
     $settings = [];
     $stmt = db()->query("SELECT key_name, value FROM settings WHERE key_name != '_version'");
@@ -56,7 +56,7 @@ function isActiveNav($href, $currentPath) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?? '' ?>">
+    <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
     <title><?= $pageTitle ?? '首页' ?> — <?= $siteName ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,7 +100,7 @@ function isActiveNav($href, $currentPath) {
     <!-- 用户区 -->
     <?php if (isLoggedIn()): ?>
         <div class="topbar-user">
-            <span class="topbar-user-avatar"><?= mb_substr(currentUser()['username'] ?? 'U', 0, 1) ?></span>
+            <span class="topbar-user-avatar"><?= htmlspecialchars(mb_substr(currentUser()['username'] ?? 'U', 0, 1)) ?></span>
             <span><?= htmlspecialchars(currentUser()['username'] ?? '') ?></span>
         </div>
         <a href="/myweb/logout.php" class="topbar-nav-link" style="font-size:0.8rem;color:var(--gray-500)"

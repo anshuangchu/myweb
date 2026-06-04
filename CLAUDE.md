@@ -37,7 +37,7 @@ Tables: `articles`, `categories`, `tags`, `article_tags` (many-to-many), `users`
 1. `includes/db_loader.php` — loads DB config, establishes PDO connection (via `db()` function)
 2. `includes/header.php` — session start, loads site settings with session cache, output buffering for `<html>` header
 3. Page-specific logic queries DB and renders HTML
-4. `includes/footer.php` — friend links, footer, conditionally loads AI chat widget (unless `settings.ai_enabled` is `'0'`), closes HTML
+4. `includes/footer.php` — friend links, footer, conditionally loads AI chat widget (for logged-in users only, unless `settings.ai_enabled` is `'0'`), closes HTML
 
 ### Key Global Functions
 
@@ -47,6 +47,7 @@ All core utility functions are defined in the external config (`../myweb-config/
 - `getUploadedFiles($allowed)` — scans `uploads/` for files matching allowed extensions, sorted by mtime desc
 - `formatSize($bytes)` — human-readable file size (B/KB/MB)
 - `renderPagination($currentPage, $totalPages, $url)` — pagination HTML with smart windowing
+- `safeRedirect($url)` — redirect with meta-refresh fallback when headers already sent
 
 **`../myweb-config/database.php` (external config):**
 - `db()` — PDO singleton (static variable, `ERRMODE_EXCEPTION`, `FETCH_ASSOC`)
@@ -84,11 +85,12 @@ A unified `AiService` class (`includes/ai_service.php`) wraps the DeepSeek Chat 
 | `recommendFromCandidates()` | Select most relevant articles from candidates |
 | `chatWithContext()` | Q&A over provided website content |
 
-Three AJAX endpoints consume this service:
+AJAX endpoints consuming this service:
 
 - **`ai_chat.php`** — Site-wide AI assistant widget. POST endpoint: extracts keywords → searches articles/pages → builds context → answers user questions. Rate-limited to 20 req/hr per IP.
 - **`ai_search.php`** — AI-enhanced search (`GET ?q=`). Expands query via AI → searches articles + pages → AI-ranks results. Cached in session for 5 minutes.
 - **`ai_recommend.php`** — Article recommendations (`GET ?id=N`). Finds same-category articles → AI-ranks → falls back to chronological order on AI failure. Returns JSON.
+- **`ai_format.php`** — AI article HTML formatting (`POST`). Takes raw HTML content + optional title, returns AI-formatted HTML. Logged-in users only, CSRF-protected.
 - **`admin/ai_helper.php`** — Admin article editor AI assistant (POST only). Restricted to `super_admin`/`admin`/`editor` roles. Actions: `summarize`, `polish`, `expand`, `generate`, `suggest_title`.
 
 ### MiMo Chat (Xiaomi MiMo)
@@ -141,6 +143,7 @@ Conversations are stored in `mimo_conversations` and `mimo_messages` tables, ide
 | `/myweb/ai_chat.php` | POST endpoint for site-wide AI assistant widget |
 | `/myweb/ai_search.php?q=X` | AJAX — AI-enhanced search with keyword expansion and AI ranking |
 | `/myweb/ai_recommend.php?id=N` | AJAX — AI-powered article recommendations |
+| `/myweb/ai_format.php` | AJAX — AI HTML formatting for article content (POST, logged-in, CSRF-protected) |
 | `/myweb/mimo_chat.php?action=X` | AJAX — MiMo chatbot with conversation management and tool execution |
 
 ### Admin Panel
@@ -167,15 +170,6 @@ Note: `admin/tags.php` exists for tag CRUD but is not linked in the sidebar.
 | `files.php` | File upload/delete/list with drag-and-drop |
 | `ai_helper.php` | AI article assistant AJAX endpoint (summarize/polish/expand/generate/suggest_title) |
 
-### Tools (`/myweb/tools/`)
-| Path | Description |
-|------|-------------|
-| `pdf.php` | Browser-based PDF viewer with annotation, rotation, download (admin: save back to server) |
-| `pdf_save.php` | Save edited PDF back to server (admin only, JSON response) |
-| `pdf_delete.php` | Delete a PDF file (JSON response) |
-| `pdf_list.php` | Return PDF file list HTML fragment |
-| `upload_save.php` | Upload a PDF file (JSON response) |
-
 ### Directory Structure
 ```
 myweb/
@@ -186,13 +180,13 @@ myweb/
 │                   # ai_service.php (DeepSeek), mimo_service.php (Xiaomi MiMo),
 │                   # chat_widget.php (AI chat floating widget — auto-loaded in footer.php),
 │                   # mimo_widget.php (MiMo chat floating widget — NOT auto-loaded)
-├── js/             # script.js (nav toggle, animations, content editor toolbar)
-├── tools/          # PDF tool pages
-├── uploads/        # User-uploaded files and PDFs (also serves as media library)
+├── js/             # script.js (nav toggle, animations, auto-format, AI chat, carousel)
+├── uploads/        # User-uploaded files (also serves as media library)
 ├── database.sql    # Full schema dump (includes FULLTEXT indexes)
 ├── ai_chat.php      # Site-wide AI assistant widget AJAX endpoint
 ├── ai_search.php    # AI-enhanced search (keyword expansion + AI ranking)
 ├── ai_recommend.php # AI-powered article recommendations
+├── ai_format.php    # AI article HTML formatting AJAX endpoint
 ├── mimo_chat.php    # MiMo chatbot with conversation management + agentic tools
 └── CLAUDE.md       # This file
 ```
@@ -211,10 +205,10 @@ myweb/
 
 ### Key Design Decisions
 - Articles and pages support raw HTML content (not Markdown)
-- Content editor uses a simple toolbar that inserts HTML tags into a textarea
+- Content editor uses a simple toolbar that inserts HTML tags into a textarea, plus an AI formatting feature (`ai_format.php`) for automated HTML cleanup
 - View counting is session-scoped (same session doesn't double-count)
-- Site settings are loaded once per session and cached in `$_SESSION['settings_cache']`
-- PDF files stored on filesystem in `uploads/` (not in DB)
+- Site settings are loaded once per session and cached in `$_SESSION['settings_cache']`, invalidated by a `_version` counter in the `settings` table
+- Uploaded files stored on filesystem in `uploads/` (not in DB)
 - Friend links displayed in footer on every page
 - Announcements shown in a styled bar at the top of every page
 - Debug mode auto-detected by local IP (`127.0.0.1`, `::1`) for potential dev-only features

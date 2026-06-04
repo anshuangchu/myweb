@@ -2,7 +2,7 @@
 require_once '../includes/header.php';
 if (!hasRole('super_admin', 'admin', 'editor')) redirect('/myweb/login.php?redirect=/myweb/admin/page_edit.php');
 
-$id = $_GET['id'] ?? 0;
+$id = (int)($_GET['id'] ?? 0);
 $page = ['title'=>'', 'slug'=>'', 'content'=>'', 'status'=>'draft'];
 
 if ($id) {
@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slug = trim($_POST['slug'] ?? '');
     $content = $_POST['content'] ?? '';
     $status = $_POST['status'] ?? 'draft';
+    if (!in_array($status, ['draft', 'published'])) $status = 'draft';
 
     if (!$title) $error = '请输入页面标题';
     if (!$slug) $slug = mb_strtolower(trim(preg_replace('/[^a-zA-Z0-9\x{4e00}-\x{9fa5}\-]+/u', '-', $title)), 'UTF-8');

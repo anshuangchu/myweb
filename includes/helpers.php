@@ -4,6 +4,10 @@
  * 优先使用 header()，失败则用 meta refresh 兜底
  */
 function safeRedirect(string $url): void {
+    // 仅允许站内跳转，防 open redirect
+    if (!str_starts_with($url, '/') && !str_starts_with($url, 'http')) {
+        $url = '/myweb/';
+    }
     if (!headers_sent()) {
         header('Location: ' . $url);
         exit;

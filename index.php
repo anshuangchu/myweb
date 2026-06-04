@@ -1,46 +1,27 @@
 <?php
 $pageTitle = '首页';
 require_once 'includes/header.php';
+require_once __DIR__ . '/includes/article_service.php';
 
-$sort = $_GET['sort'] ?? 'date';
-$order = sortField($sort);
-
+$sort      = $_GET['sort'] ?? 'date';
 $catFilter = (int)($_GET['category'] ?? 0);
-$extraWhere = '';
-if ($catFilter) {
-    $extraWhere .= " AND a.category_id = $catFilter";
-}
+$page      = max(1, (int)($_GET['page'] ?? 1));
 
-// 聚焦展示：最新发布的 5 篇文章（轮播）
-$featuredArticles = db()->query("SELECT a.*, u.username, c.name as category_name
-    FROM articles a
-    LEFT JOIN users u ON a.author_id = u.id
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.status = 'published'
-    ORDER BY a.created_at DESC LIMIT 5")->fetchAll();
-$featured = $featuredArticles[0] ?? null;
-$featuredIds = array_column($featuredArticles, 'id');
+// 聚焦展示：最新 5 篇已发布文章（轮播）
+$featuredArticles = ArticleService::getFeaturedArticles(5);
+$featured         = $featuredArticles[0] ?? null;
+$featuredIds      = array_column($featuredArticles, 'id');
+
 // 只在文章总数 > 轮播数时才排除，避免列表变空
-$totalPublished = (int)db()->query("SELECT COUNT(*) FROM articles WHERE status='published'")->fetchColumn();
-$featExclude = (count($featuredIds) >= $totalPublished) ? '' : (" AND a.id NOT IN (" . implode(',', $featuredIds) . ")");
+$stats          = ArticleService::getStats();
+$totalPublished = $stats['published'];
+$excludeIds     = (count($featuredIds) >= $totalPublished) ? [] : $featuredIds;
 
-// 分页
-$page = max(1, (int)($_GET['page'] ?? 1));
-$perPage = 10;
-$countStmt = db()->query("SELECT COUNT(*) FROM articles a WHERE a.status = 'published' $extraWhere $featExclude");
-$totalArticles = (int)$countStmt->fetchColumn();
-$totalPages = max(1, ceil($totalArticles / $perPage));
-$page = min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-
-$stmt = db()->query("SELECT a.*, u.username, c.name as category_name
-    FROM articles a
-    LEFT JOIN users u ON a.author_id = u.id
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.status = 'published' $extraWhere $featExclude
-    ORDER BY $order
-    LIMIT $perPage OFFSET $offset");
-$articles = $stmt->fetchAll();
+// 文章列表
+$result     = ArticleService::getPublishedArticles($sort, $page, 10, $catFilter, $excludeIds);
+$articles   = $result['articles'];
+$totalPages = $result['totalPages'];
+$page       = $result['page'];
 
 // 侧边栏数据
 $categories = db()->query("SELECT c.*, (SELECT COUNT(*) FROM articles WHERE category_id=c.id AND status='published') as article_count FROM categories c ORDER BY name")->fetchAll();

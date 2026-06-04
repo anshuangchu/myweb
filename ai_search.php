@@ -19,12 +19,13 @@ if (!$q || mb_strlen($q) < 1) {
     exit;
 }
 
-// Session 缓存 key
+// Session 缓存 key（5 分钟有效期）
 $cacheKey = 'ai_search_' . md5($q);
-if (!empty($_SESSION[$cacheKey])) {
+if (!empty($_SESSION[$cacheKey]) && time() - ($_SESSION[$cacheKey . '_time'] ?? 0) < 300) {
     echo json_encode(['success' => true, 'data' => $_SESSION[$cacheKey]]);
     exit;
 }
+unset($_SESSION[$cacheKey], $_SESSION[$cacheKey . '_time']);
 
 try {
     require_once __DIR__ . '/includes/ai_service.php';
@@ -116,8 +117,9 @@ try {
         ];
     }
 
+    $escapedKeywords = array_map('htmlspecialchars', $keywords);
     $data = [
-        'keywords'  => $keywords,
+        'keywords'  => $escapedKeywords,
         'articles'  => $articlesOut,
         'pages'     => $pagesOut,
     ];

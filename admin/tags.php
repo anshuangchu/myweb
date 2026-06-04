@@ -20,6 +20,7 @@ $tags = db()->query("SELECT t.*, (SELECT COUNT(*) FROM article_tags WHERE tag_id
     <aside class="admin-sidebar"><?php require_once __DIR__ . '/../includes/admin_sidebar.php'; ?></aside>
     <main class="admin-main">
         <h2>标签管理</h2>
+        <?php if (isset($error) && $error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
         <div class="admin-form-card">
             <form method="post" class="form-inline">
                 <?= csrfField() ?>

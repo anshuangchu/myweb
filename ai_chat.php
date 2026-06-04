@@ -16,11 +16,8 @@ require_once __DIR__ . '/includes/db_loader.php';
 ini_set('session.gc_maxlifetime', 3600);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// CSRF 验证
-verifyCsrf();
-
 // 限流：每小时每 IP 20 次
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$ip = getClientIP();
 $rateKey = 'chat_rate_' . md5($ip);
 $rateCount = $_SESSION[$rateKey]['count'] ?? 0;
 $rateTime = $_SESSION[$rateKey]['time'] ?? 0;
@@ -40,6 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => '仅支持 POST']);
     exit;
 }
+
+// CSRF 验证
+verifyCsrf();
 
 $question = trim($_POST['question'] ?? '');
 if (!$question) {
@@ -108,6 +108,7 @@ try {
         ],
     ], JSON_UNESCAPED_UNICODE);
 
-} catch (RuntimeException $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+} catch (Throwable $e) {
+    error_log('AI Chat error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'AI 服务暂时不可用，请稍后再试']);
 }

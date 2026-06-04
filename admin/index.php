@@ -50,7 +50,7 @@ $recentArticles = db()->query("SELECT a.*, u.username FROM articles a LEFT JOIN 
                     <td><?= htmlspecialchars($a['title']) ?></td>
                     <td><?= htmlspecialchars($a['username']) ?></td>
                     <td><?= $a['views'] ?></td>
-                    <td><span class="badge badge-<?= $a['status'] ?>"><?= $a['status'] ?></span></td>
+                    <td><span class="badge badge-<?= htmlspecialchars($a['status']) ?>"><?= htmlspecialchars($a['status']) ?></span></td>
                     <td><?= date('Y-m-d', strtotime($a['created_at'])) ?></td>
                 </tr>
                 <?php endforeach; ?>

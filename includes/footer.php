@@ -18,7 +18,7 @@ $friendLinks = db()->query("SELECT * FROM links ORDER BY sort_order ASC, id ASC"
     </div>
 </footer>
 
-<?php if (isLoggedIn() && (empty($settings['ai_enabled']) || $settings['ai_enabled'] !== '0')): ?>
+<?php if (isLoggedIn() && ($settings['ai_enabled'] ?? '1') !== '0'): ?>
 <?php require_once __DIR__ . '/chat_widget.php'; ?>
 <?php endif; ?>
 </body>

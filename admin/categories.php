@@ -2,21 +2,19 @@
 require_once '../includes/header.php';
 if (!hasRole('super_admin', 'admin')) redirect('/myweb/login.php?redirect=/myweb/admin/categories.php');
 
-// 处理新增
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['edit_id']) && isset($_POST['name'])) {
+// 处理新增 / 编辑
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['name'])) {
     verifyCsrf();
+    $editId = $_POST['edit_id'] ?? '';
     if (!empty(trim($_POST['name']))) {
-        $stmt = db()->prepare("INSERT INTO categories (name, description) VALUES (?, ?)");
-        $stmt->execute([trim($_POST['name']), trim($_POST['description'] ?? '')]);
+        if (!empty($editId)) {
+            $stmt = db()->prepare("UPDATE categories SET name=?, description=? WHERE id=?");
+            $stmt->execute([trim($_POST['name']), trim($_POST['description'] ?? ''), $editId]);
+        } else {
+            $stmt = db()->prepare("INSERT INTO categories (name, description) VALUES (?, ?)");
+            $stmt->execute([trim($_POST['name']), trim($_POST['description'] ?? '')]);
+        }
     }
-    redirect('/myweb/admin/categories.php');
-}
-
-// 处理编辑
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_id'])) {
-    verifyCsrf();
-    $stmt = db()->prepare("UPDATE categories SET name=?, description=? WHERE id=?");
-    $stmt->execute([trim($_POST['name']), trim($_POST['description'] ?? ''), $_POST['edit_id']]);
     redirect('/myweb/admin/categories.php');
 }
 

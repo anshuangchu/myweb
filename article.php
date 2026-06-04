@@ -1,16 +1,11 @@
 <?php
 require_once __DIR__ . '/includes/db_loader.php';
+require_once __DIR__ . '/includes/article_service.php';
 
-$id = $_GET['id'] ?? 0;
-$stmt = db()->prepare("SELECT a.*, u.username, c.name as category_name
-    FROM articles a
-    LEFT JOIN users u ON a.author_id = u.id
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.id = ? AND a.status = 'published'");
-$stmt->execute([$id]);
-$article = $stmt->fetch();
+$id      = (int)($_GET['id'] ?? 0);
+$article = ArticleService::getArticleById($id);
 
-if (!$article) {
+if (!$article || $article['status'] !== 'published') {
     $pageTitle = '文章不存在';
     require_once 'includes/header.php';
     echo '<div class="empty-state"><h2>文章不存在</h2><p><a href="/myweb/">返回首页</a></p></div>';
@@ -21,29 +16,20 @@ if (!$article) {
 $pageTitle = htmlspecialchars($article['title']);
 require_once 'includes/header.php';
 
-// 增加浏览量（同会话只计一次）
-if (empty($_SESSION['viewed_articles'][$id])) {
-    db()->prepare("UPDATE articles SET views = views + 1 WHERE id = ?")->execute([$id]);
-    $_SESSION['viewed_articles'][$id] = true;
-}
+// 浏览量（同会话只计一次）
+ArticleService::incrementViews($id);
 
-// 获取标签
-$tags = db()->prepare("SELECT t.id, t.name FROM tags t JOIN article_tags at ON t.id = at.tag_id WHERE at.article_id = ? ORDER BY t.name");
-$tags->execute([$id]);
-$articleTags = $tags->fetchAll();
+// 标签
+$articleTags = ArticleService::getArticleTags($id);
 
-// 阅读时间计算
-$wordCount = mb_strlen(strip_tags($article['content']));
+// 阅读时间
+$wordCount   = mb_strlen(strip_tags($article['content']));
 $readingTime = max(1, ceil($wordCount / 500));
 
 // 上下篇
-$prev = db()->prepare("SELECT id, title FROM articles WHERE status='published' AND created_at < ? ORDER BY created_at DESC LIMIT 1");
-$prev->execute([$article['created_at']]);
-$prevArticle = $prev->fetch();
-
-$next = db()->prepare("SELECT id, title FROM articles WHERE status='published' AND created_at > ? ORDER BY created_at ASC LIMIT 1");
-$next->execute([$article['created_at']]);
-$nextArticle = $next->fetch();
+$adjacent    = ArticleService::getAdjacentArticles($id, $article['created_at']);
+$prevArticle = $adjacent['prev'];
+$nextArticle = $adjacent['next'];
 
 // 封面图 URL（用于 SEO）
 $coverUrl = $article['cover_image'] ? ('/myweb/' . $article['cover_image']) : '';

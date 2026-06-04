@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['content'])) {
         $content = trim($_POST['content']);
         $status = $_POST['status'] ?? 'inactive';
+        $status = in_array($status, ['active', 'inactive']) ? $status : 'inactive';
         $edit_id = $_POST['edit_id'] ?? '';
 
         if ($content) {
@@ -57,7 +58,7 @@ $announcements = db()->query("SELECT * FROM announcements ORDER BY created_at DE
                 <?php foreach ($announcements as $a): ?>
                 <tr>
                     <td><?= htmlspecialchars(mb_substr($a['content'], 0, 80)) ?></td>
-                    <td><span class="badge badge-<?= $a['status'] ?>"><?= $a['status'] === 'active' ? '启用' : '停用' ?></span></td>
+                    <td><span class="badge badge-<?= htmlspecialchars($a['status']) ?>"><?= $a['status'] === 'active' ? '启用' : '停用' ?></span></td>
                     <td><?= date('Y-m-d', strtotime($a['created_at'])) ?></td>
                     <td>
                         <a href="/myweb/admin/announcements.php?edit=<?= $a['id'] ?>" class="btn-sm">编辑</a>

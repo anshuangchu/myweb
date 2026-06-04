@@ -34,7 +34,7 @@ $pages = db()->query("SELECT * FROM pages ORDER BY created_at DESC LIMIT $perPag
                 <tr>
                     <td><?= htmlspecialchars($p['title']) ?></td>
                     <td><a href="/myweb/page.php?slug=<?= urlencode($p['slug']) ?>" target="_blank">/<?= htmlspecialchars($p['slug']) ?></a></td>
-                    <td><span class="badge badge-<?= $p['status'] ?>"><?= $p['status'] === 'published' ? '已发布' : '草稿' ?></span></td>
+                    <td><span class="badge badge-<?= htmlspecialchars($p['status']) ?>"><?= $p['status'] === 'published' ? '已发布' : '草稿' ?></span></td>
                     <td><?= date('Y-m-d', strtotime($p['created_at'])) ?></td>
                     <td>
                         <a href="/myweb/admin/page_edit.php?id=<?= $p['id'] ?>" class="btn-sm">编辑</a>

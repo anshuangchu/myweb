@@ -28,7 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $redirectUrl = $_GET['redirect'] ?? '/myweb/';
-            if (!str_starts_with($redirectUrl, '/myweb/')) $redirectUrl = '/myweb/';
+            $redirectUrl = str_replace(['\\', "\0"], ['/', ''], $redirectUrl);
+            $parsed = parse_url($redirectUrl);
+            $path = $parsed['path'] ?? $redirectUrl;
+            $canonical = '/' . trim(str_replace(['/../', '/./', '..'], '/', '/' . $path), '/');
+            if (!str_starts_with('/' . $canonical, '/myweb/')) $redirectUrl = '/myweb/'; else $redirectUrl = '/' . $canonical;
             // JS 跳转解决 header already sent 问题
             echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirectUrl) . '"></head><body></body></html>';
             exit;

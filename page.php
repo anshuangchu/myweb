@@ -14,7 +14,7 @@ if (!$page) {
     exit;
 }
 
-$pageTitle = $page['title'];
+$pageTitle = htmlspecialchars($page['title']);
 require_once 'includes/header.php';
 ?>
 

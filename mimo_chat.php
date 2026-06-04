@@ -252,8 +252,9 @@ try {
             throw new RuntimeException('未知操作: ' . $action);
     }
 
-} catch (RuntimeException $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+} catch (Throwable $e) {
+    error_log('MiMo Chat error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => '服务暂时不可用，请稍后再试']);
 }
 
 // ===== 工具执行 =====
@@ -263,15 +264,16 @@ function executeMimoTool(string $name, array $args): array
         case 'browse_page':
             $url = $args['url'] ?? '';
             if (!$url) return ['error' => '缺少 URL'];
-            if (!str_starts_with($url, '/myweb/') && !str_starts_with($url, '/')) {
-                $url = '/myweb/' . ltrim($url, '/');
+            // 严格限制：仅允许 /myweb/ 路径，防 SSRF
+            if (!str_starts_with($url, '/myweb/')) {
+                return ['error' => '仅允许访问站内页面'];
             }
             $fullUrl = 'http://localhost' . $url;
             $ch = curl_init($fullUrl);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 10,
-                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_SSL_VERIFYPEER => false,
             ]);
             $html     = curl_exec($ch);
@@ -309,8 +311,9 @@ function executeMimoTool(string $name, array $args): array
         case 'navigate_to':
             $url = $args['url'] ?? '';
             if (!$url) return ['error' => '缺少 URL'];
-            if (!str_starts_with($url, '/myweb/') && !str_starts_with($url, '/')) {
-                $url = '/myweb/' . ltrim($url, '/');
+            // 严格限制：仅允许 /myweb/ 路径，防 open redirect
+            if (!str_starts_with($url, '/myweb/')) {
+                return ['error' => '仅支持站内导航'];
             }
             return ['url' => $url, 'message' => '正在导航到: ' . $url];
 

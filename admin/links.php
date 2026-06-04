@@ -6,6 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     if (isset($_POST['delete'])) {
         db()->prepare("DELETE FROM links WHERE id = ?")->execute([$_POST['delete']]);
+        redirect('/myweb/admin/links.php');
     } elseif (isset($_POST['name'])) {
         $name = trim($_POST['name']);
         $url = trim($_POST['url']);
@@ -17,12 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = '请输入有效的 HTTP/HTTPS 链接';
             } elseif ($edit_id) {
                 db()->prepare("UPDATE links SET name=?, url=?, sort_order=? WHERE id=?")->execute([$name, $url, $sort_order, $edit_id]);
+                redirect('/myweb/admin/links.php');
             } else {
                 db()->prepare("INSERT INTO links (name, url, sort_order) VALUES (?, ?, ?)")->execute([$name, $url, $sort_order]);
+                redirect('/myweb/admin/links.php');
             }
         }
     }
-    redirect('/myweb/admin/links.php');
 }
 
 $linkEdit = null;
@@ -38,6 +40,7 @@ $links = db()->query("SELECT * FROM links ORDER BY sort_order ASC, id ASC")->fet
     <aside class="admin-sidebar"><?php require_once __DIR__ . '/../includes/admin_sidebar.php'; ?></aside>
     <main class="admin-main">
         <h2>友链管理</h2>
+        <?php if (isset($error) && $error): ?><div class="alert alert-error"><?= $error ?></div><?php endif; ?>
         <div class="admin-form-card">
             <form method="post" class="form-inline">
                 <?= csrfField() ?>
