@@ -49,8 +49,12 @@ function formatFullArticle(html) {
         if (/^第[一二三四五六七八九十\d]+[阶段章节部]/.test(l) || /^[一二三四五六七八九十]+[、．.]/.test(l)) {
             blocks.push({ t: 'h2', c: l.replace(/^[一二三四五六七八九十]+[、．.\s]+/, '') }); i++; continue;
         }
-        if (/^\d+\.\d+[\.\s]/.test(l) || /^[（(]\d+[）)]/.test(l)) {
+        if (/^\d+\.\d+[^\d]/.test(l) || /^[（(]\d+[）)]/.test(l) || /^\d+\.\d+$/.test(l)) {
             blocks.push({ t: 'h3', c: l }); i++; continue;
+        }
+        // 命令行/参数行
+        if (/^\/[a-z]+\s/.test(l) || /^--[a-z]/.test(l) || /^\[\[/.test(l)) {
+            blocks.push({ t: 'code', c: l }); i++; continue;
         }
         // 警告
         if (/^⚠/.test(l)) {
@@ -114,13 +118,17 @@ function isCode(l) {
     if (!l || l.length > 250) return false;
     if (/^(Windows|macOS|Linux)(\s|$)/i.test(l) && l.length < 30) return false;
     if (/^(注意|提示|推荐|安装方式|方式|第[一二三四五]步|权限|验证)/.test(l)) return false;
+    // 命令/代码/配置行
     return /^(npm |git |curl |wget |sudo |apt |brew |pip |node |yarn |npx |export |set |unset |source |\.\/|mkdir |cd |ls |cp |mv |rm |cat |echo |chmod |chown |docker |kubectl |go |rustc |python |php |java |gcc |make |nvm |claude |code |dir |copy |del |type |where |cls |reg |tasklist |systemctl |scp |ssh )/i.test(l)
         || /^\$env:/i.test(l)
         || /^\$[\s(]/.test(l)
         || /^\$\w+\s*=/.test(l)
         || /^[a-zA-Z_]\w*\s*[:=]\s*["']/.test(l)
         || /^#\s/.test(l)
-        || /^\s*(import |from |def |class |const |let |var |function |return |if |for |while )/.test(l);
+        || /^\s*(import |from |def |class |const |let |var |function |return |if |for |while )/.test(l)
+        || /^--?[a-z]/.test(l)
+        || /^\[\[/.test(l)
+        || /^\/[a-z]+[\s$]/.test(l);
 }
 
 function lang(t) {
