@@ -62,7 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 out += '<p>' + frag.lines.join('<br>') + '</p>';
             }
         }
-        p.outerHTML = out;
+        p.insertAdjacentHTML('beforebegin', out);
+        p.remove();
     });
 
     function isCodeLine(line) {

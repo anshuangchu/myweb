@@ -38,9 +38,9 @@ if ($current['category_id']) {
 if (count($candidates) < 5) {
     $excludeIds = array_merge([$articleId], array_column($candidates, 'id'));
     $placeholders = implode(',', array_fill(0, count($excludeIds), '?'));
-    $stmt = db()->prepare("SELECT id, title, summary, created_at FROM articles WHERE status = 'published' AND id NOT IN ($placeholders) ORDER BY created_at DESC LIMIT ?");
-    $params = array_merge($excludeIds, [10 - count($candidates)]);
-    $stmt->execute($params);
+    $limit = (int)(10 - count($candidates));
+    $stmt = db()->prepare("SELECT id, title, summary, created_at FROM articles WHERE status = 'published' AND id NOT IN ($placeholders) ORDER BY created_at DESC LIMIT $limit");
+    $stmt->execute($excludeIds);
     $candidates = array_merge($candidates, $stmt->fetchAll());
 }
 
