@@ -86,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="e-top">
                 <input type="text" name="title" id="etitle" class="e-title" required
                        value="<?= htmlspecialchars($article['title']) ?>"
-                       placeholder="输入文章标题...">
+                       placeholder="输入文章标题..."
+                       form="articleForm">
                 <div class="e-top-row">
                     <div class="e-top-left">
                         <span class="e-badge"><?= $id ? '编辑' : '新建' ?></span>
@@ -95,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="e-top-right">
                         <button type="button" class="ebtn" onclick="formatAll()" title="智能排版">✨ 排版</button>
                         <button type="button" class="ebtn" id="previewBtn" onclick="togglePV()">👁 预览</button>
-                        <select name="status" id="estatus" class="e-select" onchange="updateStatusBadge()">
+                        <select name="status" id="estatus" class="e-select" onchange="updateStatusBadge()" form="articleForm">
                             <option value="draft" <?= $article['status']=='draft'?'selected':'' ?>>草稿</option>
                             <option value="pending" <?= $article['status']=='pending'?'selected':'' ?>>待审核</option>
                             <option value="published" <?= $article['status']=='published'?'selected':'' ?>>发布</option>
