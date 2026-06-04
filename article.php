@@ -120,11 +120,6 @@ $coverUrl = $article['cover_image'] ? ('/myweb/' . $article['cover_image']) : ''
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
             自动排版
         </button>
-        <button class="btn-format btn-ai" id="btnAiFormat" onclick="runAiFormat()" title="AI 深度分析文章结构并优化排版">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            AI 排版
-        </button>
-        <span class="toolbar-hint">自动识别 | AI 深度优化</span>
     </div>
 
     <div class="article-content-wrap">
