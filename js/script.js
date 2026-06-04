@@ -5,9 +5,11 @@
 document.addEventListener('DOMContentLoaded', () => {
 
 // ===== 文章自动排版优化 =====
-(function autoFormatArticle() {
+function runAutoFormat() {
     const article = document.querySelector('.article-content');
     if (!article) return;
+    const btn = document.getElementById('btnAutoFormat');
+    if (btn) { btn.textContent = '排版中...'; btn.disabled = true; }
 
     // 1. 已有 pre 标签识别语言
     article.querySelectorAll('pre').forEach(pre => {
@@ -126,7 +128,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function escHtml(s) {
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
-})();
+
+    // 排版完成
+    if (btn) { btn.textContent = '✓ 排版完成'; setTimeout(() => { btn.textContent = '自动排版'; btn.disabled = false; }, 1500); }
+}
+
+// 页面加载时自动执行一次
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('.article-content')) runAutoFormat();
+});
 
 // ===== 聚焦轮播 =====
 (function initCarousel() {
