@@ -154,7 +154,14 @@ function runAutoFormat() {
 
     // 排版完成，显示实际变化数
     if (btn) {
-        btn.textContent = changes > 0 ? '✓ 已优化 ' + changes + ' 处' : '✓ 内容已是最佳格式';
+        if (changes > 0) {
+            btn.textContent = '✓ 已优化 ' + changes + ' 处';
+        } else {
+            btn.textContent = '✓ 排版已是标准格式';
+            btn.style.borderColor = 'var(--gray-600)';
+            btn.style.color = 'var(--gray-400)';
+            setTimeout(() => { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent-light)'; }, 2000);
+        }
         btn.disabled = false;
         setTimeout(() => { btn.textContent = '自动排版'; }, 2000);
     }
