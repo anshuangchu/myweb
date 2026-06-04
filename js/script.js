@@ -4,168 +4,136 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-// ===== 文章自动排版优化 =====
+// ===== 文章自动排版 =====
 function runAutoFormat() {
     const article = document.querySelector('.article-content');
     if (!article) return;
     const btn = document.getElementById('btnAutoFormat');
     if (btn) { btn.textContent = '排版中...'; btn.disabled = true; }
 
-    let changes = 0;
+    const rawHTML = article.innerHTML;
 
-    // 1. 已有 pre 标签识别语言
-    article.querySelectorAll('pre').forEach(pre => {
-        if (pre.hasAttribute('data-lang')) return;
-        pre.setAttribute('data-lang', detectLang(pre.textContent.slice(0, 300)));
-        changes++;
-    });
+    // 判断是否需要全文重构（<br>密集文章）
+    const brCount = (rawHTML.match(/<br\s*\/?>/gi) || []).length;
 
-    // 2. 处理 <br> 分隔的段落
-    article.querySelectorAll('p').forEach(p => {
-        const html = p.innerHTML;
-        if (!html.includes('<br')) return;
-
-        const rawLines = html.split(/<br\s*\/?>/i);
-        const lines = rawLines.map(l => l.trim()).filter(l => l);
-        if (lines.length < 2) return;
-
-        // 分类每一行
-        const items = lines.map(l => classifyLine(l));
-
-        // 合并连续同类项
-        const groups = [];
-        for (const item of items) {
-            const last = groups[groups.length - 1];
-            if (last && last.type === item.type) {
-                last.content.push(item.raw);
-            } else {
-                groups.push({ type: item.type, content: [item.raw] });
-            }
-        }
-
-        // 检查是否有需要转换的内容
-        const hasChanges = groups.some(g => g.type !== 'text' || g.content.some(l => /`|\*\*|https?:\/\//.test(l)));
-        if (!hasChanges && lines.every(l => !isCodeLine(l) && !/^[第⚠一二三四五六七八九十\d]/.test(l))) return;
-
-        // 生成输出
-        let out = '';
-        for (const g of groups) {
-            const text = g.content.join('\n');
-            switch (g.type) {
-                case 'code':
-                    out += '<pre data-lang="' + detectLang(text) + '"><code>' + escHtml(text) + '</code></pre>';
-                    changes++;
-                    break;
-                case 'h3':
-                    out += '<h3>' + formatInline(text) + '</h3>';
-                    changes++;
-                    break;
-                case 'h4':
-                    out += '<h4>' + formatInline(text) + '</h4>';
-                    changes++;
-                    break;
-                case 'warn':
-                    out += '<p class="article-warn">' + formatInline(text.replace(/^⚠️?\s*/, '')) + '</p>';
-                    changes++;
-                    break;
-                default:
-                    const formatted = formatInline(g.content.join('<br>'));
-                    if (formatted !== g.content.join('<br>')) changes++;
-                    out += '<p>' + formatted + '</p>';
-            }
-        }
-        p.insertAdjacentHTML('beforebegin', out);
-        p.remove();
-    });
-
-    // 3. 已有结构文章的增强：行内格式化 + 标题美化
-    article.querySelectorAll('p:not(.article-warn)').forEach(p => {
-        if (p.querySelector('br')) return;
-        const before = p.innerHTML;
-        p.innerHTML = formatInline(p.innerHTML);
-        if (before !== p.innerHTML) changes++;
-    });
-
-    // 4. 已有 h3/h4 加 accent 样式
-    article.querySelectorAll('h3, h4').forEach(h => {
-        if (!h.classList.contains('auto-styled')) {
-            h.classList.add('auto-styled');
-            changes++;
-        }
-    });
-
-    // ===== 分类函数 =====
-    function classifyLine(t) {
-        // 标题行
-        if (/^第[一二三四五六七八九十\d]+[阶段章节部]/.test(t)) return { type: 'h3', raw: t };
-        if (/^[一二三四五六七八九十\d]+[、．.]\s/.test(t)) return { type: 'h3', raw: t };
-        if (/^\d+\.\d+\s/.test(t)) return { type: 'h4', raw: t };
-
-        // 警告行
-        if (/^⚠/.test(t)) return { type: 'warn', raw: t };
-
-        // 代码行
-        if (isCodeLine(t)) return { type: 'code', raw: t };
-
-        return { type: 'text', raw: t };
+    if (brCount >= 3) {
+        // 全文重构
+        article.innerHTML = formatFullArticle(rawHTML);
+        if (btn) { btn.textContent = '✓ 排版完成'; btn.disabled = false; }
+        setTimeout(() => { if (btn) btn.textContent = '自动排版'; }, 2000);
+        return;
     }
 
-    function isCodeLine(t) {
-        if (!t || t.length > 200) return false;  // 超长行不是代码
-        // 排除标题/说明行
-        if (/^(Windows|macOS|Linux|Ubuntu|CentOS)(\s|$)/i.test(t) && t.length < 30) return false;
-        if (/^(Windows|Mac|Linux).*(PowerShell|CMD|命令|终端|Bash|Zsh|用户)/i.test(t)) return false;
-        if (/^(注意|提示|推荐|安装方式|方式[一二三]|第[一二三]步)/.test(t)) return false;
-        // 大于3行的段落里，非中文为主的可能是代码
-        // 命令特征
-        return /^(npm |git |curl |wget |sudo |apt |brew |pip |node |yarn |npx |export |set |unset |source |\.\/|mkdir |cd |ls |cp |mv |rm |cat |echo |chmod |chown |docker |kubectl |go |rustc |python |php |java |gcc |make |nvm |claude |code |dir |copy |del |type |where |cls |reg |tasklist |systemctl |scp |ssh )/i.test(t)
-            || /^\$env:/i.test(t)
-            || /^\$[\s(]/.test(t)
-            || /^#\s(?!.*配置|.*阶段|.*注意|.*推荐|.*用户)/.test(t)
-            || /^[a-zA-Z0-9._-]+[>$]\s/.test(t)
-            || /^\$\w+\s*=/.test(t)
-            || /^[a-zA-Z_]\w*\s*[:=]\s*["']/.test(t)
-            || /^\s*(import |from |def |class |const |let |var |function |return |if |for |while )/.test(t);
-    }
-
-    function detectLang(text) {
-        const t = text.slice(0, 300);
-        if (/\b(npm |git |curl |sudo |apt |brew |\.\/|export |source |chmod |nvm |make )/.test(t)) return 'BASH';
-        if (/^\$env:/m.test(t)) return 'PowerShell';
-        if (/\b(set |dir |copy |del |mkdir |cd |echo |cls |type |reg )/i.test(t)) return 'CMD';
-        if (/\b(def |import |print\(|from \w+ import|class \w+.*:|elif |except )/.test(t)) return 'Python';
-        if (/\b(const |let |var |function\s+\w+\s*\(|=>|console\.log|import\s)/.test(t)) return 'JavaScript';
-        if (/\b(SELECT |INSERT |UPDATE |DELETE |CREATE TABLE|ALTER TABLE)/i.test(t)) return 'SQL';
-        if (/[\w-]+\s*:\s*[\w#]+;|@media|@keyframes/.test(t)) return 'CSS';
-        return 'CODE';
-    }
-
-    // ===== 行内格式化 =====
-    function formatInline(text) {
-        return text
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-    }
-
-    function escHtml(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    // 排版完成，显示实际变化数
+    // 标准HTML增强
+    let c = enhanceArticle(article);
     if (btn) {
-        if (changes > 0) {
-            btn.textContent = '✓ 已优化 ' + changes + ' 处';
-        } else {
-            btn.textContent = '✓ 排版已是标准格式';
-            btn.style.borderColor = 'var(--gray-600)';
-            btn.style.color = 'var(--gray-400)';
-            setTimeout(() => { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent-light)'; }, 2000);
-        }
+        btn.textContent = c > 0 ? '✓ 已优化 ' + c + ' 处' : '✓ 已是最佳格式';
         btn.disabled = false;
-        setTimeout(() => { btn.textContent = '自动排版'; }, 2000);
+        setTimeout(() => { if (btn) btn.textContent = '自动排版'; }, 2000);
     }
 }
+
+function formatFullArticle(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const lines = tmp.textContent.split('\n').map(l => l.trim());
+    const blocks = [];
+
+    let i = 0;
+    while (i < lines.length) {
+        const l = lines[i];
+        if (!l) { i++; continue; }
+
+        // 标题
+        if (/^第[一二三四五六七八九十\d]+[阶段章节部]/.test(l) || /^[一二三四五六七八九十]+[、．.]/.test(l)) {
+            blocks.push({ t: 'h2', c: l.replace(/^[一二三四五六七八九十]+[、．.\s]+/, '') }); i++; continue;
+        }
+        if (/^\d+\.\d+[\.\s]/.test(l) || /^[（(]\d+[）)]/.test(l)) {
+            blocks.push({ t: 'h3', c: l }); i++; continue;
+        }
+        // 警告
+        if (/^⚠/.test(l)) {
+            blocks.push({ t: 'warn', c: l.replace(/^⚠️?\s*/, '') }); i++; continue;
+        }
+        // 代码
+        if (isCode(l)) {
+            const code = [l]; i++;
+            while (i < lines.length && (isCode(lines[i]) || (lines[i] === '' && i+1 < lines.length && isCode(lines[i+1])))) {
+                if (lines[i]) code.push(lines[i]);
+                i++;
+            }
+            blocks.push({ t: 'code', c: code.join('\n') });
+            continue;
+        }
+        // 文本段
+        const txt = [l]; i++;
+        while (i < lines.length && lines[i] && !/^第[一二三四五六七八九十\d]+[阶段章节部]/.test(lines[i]) && !/^[一二三四五六七八九十]+[、．.]/.test(lines[i]) && !/^\d+\.\d+[\.\s]/.test(lines[i]) && !/^⚠/.test(lines[i]) && !isCode(lines[i])) {
+            txt.push(lines[i]); i++;
+        }
+        blocks.push({ t: 'text', c: txt.join('\n') });
+    }
+
+    // 渲染
+    let out = '';
+    for (const b of blocks) {
+        switch (b.t) {
+            case 'h2': out += '<h2>' + esc(b.c) + '</h2>'; break;
+            case 'h3': out += '<h3>' + esc(b.c) + '</h3>'; break;
+            case 'code': out += '<pre data-lang="' + lang(b.c) + '"><code>' + esc(b.c) + '</code></pre>'; break;
+            case 'warn': out += '<p class="article-warn">' + esc(b.c) + '</p>'; break;
+            default:
+                let t = esc(b.c);
+                t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+                t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                t = t.replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank">$1</a>');
+                out += '<p>' + t + '</p>';
+        }
+    }
+    return out;
+}
+
+function enhanceArticle(article) {
+    let c = 0;
+    article.querySelectorAll('pre').forEach(pre => {
+        if (!pre.hasAttribute('data-lang')) { pre.setAttribute('data-lang', lang(pre.textContent.slice(0,300))); c++; }
+    });
+    article.querySelectorAll('p:not(.article-warn)').forEach(p => {
+        if (p.querySelector('br')) return;
+        const orig = p.innerHTML;
+        p.innerHTML = p.innerHTML
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank">$1</a>');
+        if (orig !== p.innerHTML) c++;
+    });
+    return c;
+}
+
+function isCode(l) {
+    if (!l || l.length > 250) return false;
+    if (/^(Windows|macOS|Linux)(\s|$)/i.test(l) && l.length < 30) return false;
+    if (/^(注意|提示|推荐|安装方式|方式|第[一二三四五]步|权限|验证)/.test(l)) return false;
+    return /^(npm |git |curl |wget |sudo |apt |brew |pip |node |yarn |npx |export |set |unset |source |\.\/|mkdir |cd |ls |cp |mv |rm |cat |echo |chmod |chown |docker |kubectl |go |rustc |python |php |java |gcc |make |nvm |claude |code |dir |copy |del |type |where |cls |reg |tasklist |systemctl |scp |ssh )/i.test(l)
+        || /^\$env:/i.test(l)
+        || /^\$[\s(]/.test(l)
+        || /^\$\w+\s*=/.test(l)
+        || /^[a-zA-Z_]\w*\s*[:=]\s*["']/.test(l)
+        || /^#\s/.test(l)
+        || /^\s*(import |from |def |class |const |let |var |function |return |if |for |while )/.test(l);
+}
+
+function lang(t) {
+    t = t.slice(0, 300);
+    if (/\b(npm |git |curl |sudo |apt |brew |export |source |chmod |make |\.\/)/.test(t)) return 'BASH';
+    if (/^\$env:/m.test(t)) return 'PowerShell';
+    if (/\b(set |dir |copy |del |mkdir |cd |echo |cls |type |reg )/i.test(t)) return 'CMD';
+    if (/\b(def |import |print\(|class |elif |except )/.test(t)) return 'Python';
+    if (/\b(const |let |var |function |=>|console\.log)/.test(t)) return 'JavaScript';
+    if (/\b(SELECT |INSERT |UPDATE |DELETE |CREATE TABLE)/i.test(t)) return 'SQL';
+    return 'CODE';
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ===== AI 排版 =====
 function runAiFormat() {
