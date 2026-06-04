@@ -11,10 +11,13 @@ function runAutoFormat() {
     const btn = document.getElementById('btnAutoFormat');
     if (btn) { btn.textContent = '排版中...'; btn.disabled = true; }
 
+    let changes = 0;
+
     // 1. 已有 pre 标签识别语言
     article.querySelectorAll('pre').forEach(pre => {
         if (pre.hasAttribute('data-lang')) return;
         pre.setAttribute('data-lang', detectLang(pre.textContent.slice(0, 300)));
+        changes++;
     });
 
     // 2. 处理 <br> 分隔的段落
@@ -40,6 +43,10 @@ function runAutoFormat() {
             }
         }
 
+        // 检查是否有需要转换的内容
+        const hasChanges = groups.some(g => g.type !== 'text' || g.content.some(l => /`|\*\*|https?:\/\//.test(l)));
+        if (!hasChanges && lines.every(l => !isCodeLine(l) && !/^[第⚠一二三四五六七八九十\d]/.test(l))) return;
+
         // 生成输出
         let out = '';
         for (const g of groups) {
@@ -47,28 +54,44 @@ function runAutoFormat() {
             switch (g.type) {
                 case 'code':
                     out += '<pre data-lang="' + detectLang(text) + '"><code>' + escHtml(text) + '</code></pre>';
+                    changes++;
                     break;
                 case 'h3':
                     out += '<h3>' + formatInline(text) + '</h3>';
+                    changes++;
                     break;
                 case 'h4':
                     out += '<h4>' + formatInline(text) + '</h4>';
+                    changes++;
                     break;
                 case 'warn':
                     out += '<p class="article-warn">' + formatInline(text.replace(/^⚠️?\s*/, '')) + '</p>';
+                    changes++;
                     break;
                 default:
-                    out += '<p>' + formatInline(g.content.join('<br>')) + '</p>';
+                    const formatted = formatInline(g.content.join('<br>'));
+                    if (formatted !== g.content.join('<br>')) changes++;
+                    out += '<p>' + formatted + '</p>';
             }
         }
         p.insertAdjacentHTML('beforebegin', out);
         p.remove();
     });
 
-    // 3. 处理单段落的格式增强
-    article.querySelectorAll('p').forEach(p => {
+    // 3. 已有结构文章的增强：行内格式化 + 标题美化
+    article.querySelectorAll('p:not(.article-warn)').forEach(p => {
         if (p.querySelector('br')) return;
+        const before = p.innerHTML;
         p.innerHTML = formatInline(p.innerHTML);
+        if (before !== p.innerHTML) changes++;
+    });
+
+    // 4. 已有 h3/h4 加 accent 样式
+    article.querySelectorAll('h3, h4').forEach(h => {
+        if (!h.classList.contains('auto-styled')) {
+            h.classList.add('auto-styled');
+            changes++;
+        }
     });
 
     // ===== 分类函数 =====
@@ -129,8 +152,12 @@ function runAutoFormat() {
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // 排版完成
-    if (btn) { btn.textContent = '✓ 排版完成'; setTimeout(() => { btn.textContent = '自动排版'; btn.disabled = false; }, 1500); }
+    // 排版完成，显示实际变化数
+    if (btn) {
+        btn.textContent = changes > 0 ? '✓ 已优化 ' + changes + ' 处' : '✓ 内容已是最佳格式';
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = '自动排版'; }, 2000);
+    }
 }
 
 // 页面加载时自动执行一次
