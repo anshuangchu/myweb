@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="e-top-right">
                         <button type="button" class="ebtn" onclick="formatAll()" title="智能排版">✨ 排版</button>
-                        <button type="button" class="ebtn ebtn-on" id="previewBtn" onclick="togglePV()">👁 全屏编辑</button>
+                        <button type="button" class="ebtn" id="previewBtn" onclick="togglePV()">👁 预览</button>
                         <select name="status" id="estatus" class="e-select" onchange="updateStatusBadge()">
                             <option value="draft" <?= $article['status']=='draft'?'selected':'' ?>>草稿</option>
                             <option value="pending" <?= $article['status']=='pending'?'selected':'' ?>>待审核</option>
@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </form>
                 </div>
 
-                <div class="e-preview" id="previewPane">
+                <div class="e-preview" id="previewPane" style="display:none">
                     <div class="e-preview-inner article-content" id="previewContent"></div>
                 </div>
             </div>
@@ -216,35 +216,28 @@ const pvContent = document.getElementById('previewContent');
 let isPV = false;
 let aiResult = '', aiAction = '';
 
-// ===== 实时预览 =====
-let previewTimer;
+// ===== 生成预览内容 =====
 function updatePreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(() => {
-        const html = ta.value || '<p style="color:var(--gray-500);text-align:center;padding:40px">暂无内容</p>';
-        pvContent.innerHTML = html;
-        // 代码块加语言标签
-        pvContent.querySelectorAll('pre').forEach(p => {
-            if (!p.hasAttribute('data-lang')) {
-                const t = p.textContent.slice(0,200);
-                if (/\b(npm |git |curl |sudo |export |\.\/|brew )/.test(t)) p.setAttribute('data-lang','BASH');
-                else if (/^\$env:/m.test(t)) p.setAttribute('data-lang','PowerShell');
-                else if (/\b(set |dir |copy |del |mkdir )/i.test(t)) p.setAttribute('data-lang','CMD');
-                else p.setAttribute('data-lang','CODE');
-            }
-        });
-    }, 200);
+    const html = ta.value || '<p style="color:var(--gray-500);text-align:center;padding:40px">暂无内容</p>';
+    pvContent.innerHTML = html;
+    pvContent.querySelectorAll('pre').forEach(p => {
+        if (!p.hasAttribute('data-lang')) {
+            const t = p.textContent.slice(0,200);
+            if (/\b(npm |git |curl |sudo |export |\.\/|brew )/.test(t)) p.setAttribute('data-lang','BASH');
+            else if (/^\$env:/m.test(t)) p.setAttribute('data-lang','PowerShell');
+            else if (/\b(set |dir |copy |del |mkdir )/i.test(t)) p.setAttribute('data-lang','CMD');
+            else p.setAttribute('data-lang','CODE');
+        }
+    });
 }
-ta.addEventListener('input', updatePreview);
-updatePreview();
 
 // ===== 预览切换 =====
 function togglePV() {
     isPV = !isPV;
     document.getElementById('editorPane').style.display = isPV ? 'none' : '';
     pv.style.display = isPV ? '' : 'none';
+    document.getElementById('previewBtn').textContent = isPV ? '✏ 编辑' : '👁 预览';
     document.getElementById('previewBtn').classList.toggle('ebtn-on', isPV);
-    document.getElementById('previewBtn').textContent = isPV ? '📄 双栏' : '👁 全屏编辑';
     if (isPV) updatePreview();
 }
 

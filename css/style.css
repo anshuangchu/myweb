@@ -2307,11 +2307,8 @@ body {
 .ebtn:hover { background: var(--gray-800); color: var(--gray-100); transform: translateY(-1px); }
 .ebtn-on { background: var(--accent-subtle); color: var(--accent-light); border-color: rgba(108,140,255,0.25); }
 
-/* 双栏 */
+/* 单栏编辑区 */
 .e-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
   border: 1px solid var(--gray-700);
   border-radius: 12px;
   overflow: hidden;
@@ -2322,7 +2319,6 @@ body {
 .e-editor {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--gray-700);
 }
 
 .e-toolbar {
