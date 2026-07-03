@@ -14,6 +14,13 @@ A custom PHP CMS/blog system ("myweb") running on XAMPP. Dark-themed, role-based
 - **JavaScript** (vanilla — no framework)
 - **PDF.js** + **PDF-Lib** for browser-based PDF viewing/annotation/editing
 
+## Development
+
+- **No build step** — PHP files are served directly by Apache via XAMPP
+- **No test suite, no linter, no package manager** — this is a raw PHP application
+- The `database.php` external config installs a global `set_exception_handler` that shows error details only in debug mode (auto-detected by local IP: `127.0.0.1` or `::1`)
+- Changes take effect immediately on page reload (no compilation)
+
 ## External Config Files
 
 All sensitive config files are stored **outside the web root** at `../myweb-config/` (relative to `includes/`):
@@ -22,10 +29,10 @@ All sensitive config files are stored **outside the web root** at `../myweb-conf
 |------|---------|
 | `database.php` | Must define a `db()` function returning a PDO instance. See `includes/db_loader.php:5-10` for path resolution. |
 | `ai_config.php` | Defines `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (default `deepseek-chat`), `DEEPSEEK_BASE_URL` (default `https://api.deepseek.com`) |
-| `mimo_config.php` | Defines `MIMO_API_KEY`, `MIMO_MODEL` (default `mimo-v2.5`), `MIMO_BASE_URL` (default `https://api.xiaomimimo.com/v1`) |
+| `mimo_config.php` | Defines `MIMO_API_KEY`, `MIMO_MODEL` (default `mimo-v2.5`), `MIMO_BASE_URL` (default `https://api.xiaomimimo.com/v1`). **Must be created manually** — the file does not ship by default. |
 | `invite_config.php` | Defines `INVITE_CODE` for registration gating |
 
-All config files are resolved using the same `__DIR__`-relative search pattern (tries `../../myweb-config`, `../myweb-config`, `../../../myweb-config`).
+Config files are resolved using a cascading `__DIR__`-relative search: `ai_service.php` and `mimo_service.php` try `../../myweb-config` → `../myweb-config` → `../../../myweb-config`; `db_loader.php` tries only `../../myweb-config` → `../../../myweb-config` (skips `../myweb-config`).
 
 ## Database Schema
 
@@ -41,7 +48,7 @@ Tables: `articles`, `categories`, `tags`, `article_tags` (many-to-many), `users`
 
 ### Key Global Functions
 
-All core utility functions are defined in the external config (`../myweb-config/database.php`):
+Utility functions are split between `includes/helpers.php` (loaded automatically by `db_loader.php`) and the external config:
 
 **`includes/helpers.php`:**
 - `getUploadedFiles($allowed)` — scans `uploads/` for files matching allowed extensions, sorted by mtime desc

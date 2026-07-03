@@ -105,47 +105,60 @@ $coverUrl = $article['cover_image'] ? ('/myweb/' . $article['cover_image']) : ''
         </div>
     </div>
 
-    <div class="article-footer">
-        <div class="article-footer-left">
-            <a href="/myweb/" class="btn-sm">← 返回首页</a>
-        </div>
-        <div class="article-footer-right">
-            <button class="btn-sm" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ 回到顶部</button>
-        </div>
+    <!-- 文章底部操作栏 -->
+    <div class="article-actions-bar">
+        <a href="/myweb/" class="article-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            返回首页
+        </a>
+        <button class="article-action-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            回到顶部
+        </button>
+        <button class="article-action-btn" onclick="copyLink()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            复制链接
+        </button>
     </div>
 
     <?php if ($prevArticle || $nextArticle): ?>
-    <nav class="article-nav">
-        <div class="article-nav-prev">
-            <?php if ($prevArticle): ?>
-            <a href="/myweb/article.php?id=<?= $prevArticle['id'] ?>" class="article-nav-link">
+    <!-- 上下篇导航卡片 -->
+    <nav class="article-nav-cards">
+        <?php if ($prevArticle): ?>
+        <a href="/myweb/article.php?id=<?= $prevArticle['id'] ?>" class="glow-card article-nav-card">
+            <div class="glow-card-body">
                 <span class="article-nav-label">← 上一篇</span>
-                <span class="article-nav-title"><?= htmlspecialchars($prevArticle['title']) ?></span>
-            </a>
-            <?php endif; ?>
-        </div>
-        <div class="article-nav-next">
-            <?php if ($nextArticle): ?>
-            <a href="/myweb/article.php?id=<?= $nextArticle['id'] ?>" class="article-nav-link">
+                <h3><?= htmlspecialchars($prevArticle['title']) ?></h3>
+            </div>
+        </a>
+        <?php else: ?>
+        <div class="article-nav-card article-nav-empty"></div>
+        <?php endif; ?>
+
+        <?php if ($nextArticle): ?>
+        <a href="/myweb/article.php?id=<?= $nextArticle['id'] ?>" class="glow-card article-nav-card article-nav-card-next">
+            <div class="glow-card-body">
                 <span class="article-nav-label">下一篇 →</span>
-                <span class="article-nav-title"><?= htmlspecialchars($nextArticle['title']) ?></span>
-            </a>
-            <?php endif; ?>
-        </div>
+                <h3><?= htmlspecialchars($nextArticle['title']) ?></h3>
+            </div>
+        </a>
+        <?php else: ?>
+        <div class="article-nav-card article-nav-empty"></div>
+        <?php endif; ?>
     </nav>
     <?php endif; ?>
 
-    <!-- AI 推荐阅读 -->
-    <div id="aiRecommendSection" class="recommend-section" style="display:none">
-        <div class="recommend-header">
-            <h3>📚 推荐阅读</h3>
-            <span class="recommend-badge">AI 推荐</span>
+    <!-- AI 推荐阅读 — 卡片网格 -->
+    <div id="aiRecommendSection" class="article-recommend" style="display:none">
+        <div class="search-section-head">
+            <h3>推荐阅读</h3>
+            <span class="ai-search-badge">AI 推荐</span>
         </div>
-        <div id="recommendLoading" class="recommend-loading">
+        <div id="recommendLoading" class="recommend-loading" style="text-align:center;padding:var(--sp-8)">
             <div class="ai-spinner"></div>
-            <span>AI 正在分析相关文章…</span>
+            <span style="color:var(--text-muted);font-size:0.85rem">AI 正在分析相关文章…</span>
         </div>
-        <div id="recommendList" class="recommend-list"></div>
+        <div id="recommendList" class="glow-grid"></div>
     </div>
 </article>
 
@@ -171,6 +184,9 @@ function copyLink() {
     });
 }
 
+// HTML 转义
+function escHTML(str) { var d = document.createElement('div'); d.appendChild(document.createTextNode(str)); return d.innerHTML; }
+
 // AI 推荐阅读
 document.addEventListener('DOMContentLoaded', function() {
     const articleId = <?= $id ?>;
@@ -185,10 +201,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 res.data.forEach(item => {
                     const el = document.createElement('a');
                     el.href = '/myweb/article.php?id=' + item.id;
-                    el.className = 'recommend-item';
-                    el.innerHTML = '<strong>' + item.title + '</strong>' +
-                        (item.summary ? '<span>' + item.summary + '</span>' : '') +
-                        '<small>' + item.date + '</small>';
+                    el.className = 'glow-card';
+                    el.innerHTML = '<div class="glow-card-body"><h3>' + escHTML(item.title) + '</h3>' +
+                        (item.summary ? '<p>' + escHTML(item.summary) + '</p>' : '') +
+                        '<div class="glow-card-meta"><span>' + escHTML(item.date) + '</span></div></div>';
                     list.appendChild(el);
                 });
                 document.getElementById('aiRecommendSection').style.display = 'block';

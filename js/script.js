@@ -314,14 +314,19 @@ document.querySelectorAll('.article-card, .stat-card').forEach(card => {
 
 function initAiChatDrag() {
     const widget = document.getElementById('aiChatWidget');
-    const header = widget?.querySelector('.ai-chat-header');
-    if (!widget || !header) return;
+    if (!widget) return;
+
+    // 拖动句柄：面板标题栏 + 浮动按钮
+    const header = widget.querySelector('.ai-chat-header');
+    const toggle = document.getElementById('aiChatToggle');
 
     let isDragging = false, startX, startY, origLeft, origTop;
 
     function onStart(e) {
         const ev = e.touches ? e.touches[0] : e;
-        if (ev.target.closest('.ai-chat-close')) return;
+        if (ev.target.closest('.ai-chat-close') || ev.target.closest('.ai-chat-send') || ev.target.closest('.ai-chat-input')) return;
+        if (ev.target.closest('button') && !ev.target.closest('#aiChatToggle') && !ev.target.closest('.ai-chat-header')) return;
+
         isDragging = true;
         const rect = widget.getBoundingClientRect();
         const curLeft = parseFloat(widget.style.left) || rect.left;
@@ -329,6 +334,7 @@ function initAiChatDrag() {
         widget.style.left = curLeft + 'px';
         widget.style.top  = curTop + 'px';
         widget.style.right = 'auto';
+        widget.style.bottom = 'auto';
         startX = ev.clientX; startY = ev.clientY;
         origLeft = curLeft; origTop = curTop;
         widget.classList.add('ai-chat-dragging');
@@ -349,10 +355,17 @@ function initAiChatDrag() {
         document.body.style.userSelect = '';
     }
 
-    header.addEventListener('mousedown', onStart);
+    if (header) {
+        header.addEventListener('mousedown', onStart);
+        header.addEventListener('touchstart', onStart, { passive: true });
+        header.style.cursor = 'grab';
+    }
+    if (toggle) {
+        toggle.addEventListener('mousedown', onStart);
+        toggle.addEventListener('touchstart', onStart, { passive: true });
+    }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onEnd);
-    header.addEventListener('touchstart', onStart, { passive: true });
     document.addEventListener('touchmove', onMove, { passive: true });
     document.addEventListener('touchend', onEnd);
 }

@@ -27,6 +27,18 @@ if (empty($_SESSION['settings_cache']) || ($_SESSION['settings_cache_version'] ?
 $siteName = htmlspecialchars($settings['site_name'] ?? '我的网站');
 $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
+// 加载用户显示名和头像
+$displayName = '';
+$userAvatar = '';
+if (isLoggedIn() && file_exists(__DIR__ . '/user_service.php')) {
+    require_once __DIR__ . '/user_service.php';
+    $curUser = currentUser();
+    $uid = (int)($_SESSION['user_id'] ?? 0);
+    $displayName = UserService::getDisplayName($uid, $curUser['username'] ?? 'U');
+    $us = UserService::getSettings($uid);
+    $userAvatar = $us['avatar'] ?? '';
+}
+
 // 获取活跃公告
 $announcement = db()->query("SELECT content FROM announcements WHERE status='active' LIMIT 1")->fetchColumn();
 
@@ -38,10 +50,12 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-i
 // 导航项
 $navLinks = [
     ['href' => '/myweb/',          'label' => '首页'],
-    ['href' => '/myweb/pages.php',  'label' => '资料'],
     ['href' => '/myweb/search.php', 'label' => '搜索'],
     ['href' => '/myweb/files.php',  'label' => '文件'],
 ];
+if (isLoggedIn()) {
+    $navLinks[] = ['href' => '/myweb/friends.php', 'label' => '好友'];
+}
 if (isLoggedIn() && hasRole('super_admin', 'admin', 'editor')) {
     $navLinks[] = ['href' => '/myweb/admin/', 'label' => '管理'];
 }
@@ -55,14 +69,16 @@ function isActiveNav($href, $currentPath) {
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1280">
     <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '') ?>">
     <title><?= $pageTitle ?? '首页' ?> — <?= $siteName ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/myweb/css/style.css">
+
     <script src="/myweb/js/script.js" defer></script>
+    <noscript><style>.article-card{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
 
@@ -99,9 +115,18 @@ function isActiveNav($href, $currentPath) {
 
     <!-- 用户区 -->
     <?php if (isLoggedIn()): ?>
+        <a href="/myweb/settings.php" class="topbar-nav-link" title="个人设置" style="font-size:0.85rem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </a>
         <div class="topbar-user">
-            <span class="topbar-user-avatar"><?= htmlspecialchars(mb_substr(currentUser()['username'] ?? 'U', 0, 1)) ?></span>
-            <span><?= htmlspecialchars(currentUser()['username'] ?? '') ?></span>
+            <span class="topbar-user-avatar">
+                <?php if ($userAvatar): ?>
+                    <img src="<?= str_starts_with($userAvatar,'data:') ? htmlspecialchars($userAvatar) : '/myweb/uploads/'.htmlspecialchars(basename($userAvatar)) ?>" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">
+                <?php else: ?>
+                    <?= htmlspecialchars(mb_substr($displayName ?: ($curUser['username'] ?? 'U'), 0, 1)) ?>
+                <?php endif; ?>
+            </span>
+            <span><?= htmlspecialchars($displayName ?: (currentUser()['username'] ?? 'U')) ?></span>
         </div>
         <a href="/myweb/logout.php" class="topbar-nav-link" style="font-size:0.8rem;color:var(--gray-500)"
            onclick="event.preventDefault();document.getElementById('logoutForm').submit();">退出</a>

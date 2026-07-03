@@ -36,11 +36,11 @@ $page       = $result['page'];
     <main class="admin-main">
         <div class="flex-between">
             <h2>文章管理</h2>
-            <div style="display:flex;gap:8px;align-items:center">
-                <span style="font-size:0.85rem;color:var(--text-secondary)">排序:</span>
-                <a href="/myweb/admin/articles.php?sort=date" class="btn-sm <?= $sort==='date'?'active':'' ?>" style="<?= $sort==='date'?'background:var(--accent);color:#fff;border-color:var(--accent);':'' ?>">按日期</a>
-                <a href="/myweb/admin/articles.php?sort=views" class="btn-sm <?= $sort==='views'?'active':'' ?>" style="<?= $sort==='views'?'background:var(--accent);color:#fff;border-color:var(--accent);':'' ?>">按浏览</a>
-                <a href="/myweb/admin/article_edit.php" class="btn btn-primary" style="margin-left:4px">写文章</a>
+            <div class="admin-toolbar">
+                <span class="admin-toolbar-label">排序</span>
+                <a href="/myweb/admin/articles.php?sort=date" class="btn-sm <?= $sort==='date'?'active':'' ?>">按日期</a>
+                <a href="/myweb/admin/articles.php?sort=views" class="btn-sm <?= $sort==='views'?'active':'' ?>">按浏览</a>
+                <a href="/myweb/admin/article_edit.php" class="btn btn-primary">✏️ 写文章</a>
             </div>
         </div>
         <?php if (empty($articles)): ?>

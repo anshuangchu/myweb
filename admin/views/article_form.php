@@ -13,7 +13,7 @@
 ?>
 <div class="admin-layout">
     <aside class="admin-sidebar"><?php require_once __DIR__ . '/../../includes/admin_sidebar.php'; ?></aside>
-    <main class="admin-main" style="padding:24px 32px">
+    <main class="admin-main admin-main-wide">
         <form method="post" enctype="multipart/form-data" id="articleForm">
         <?= csrfField() ?>
         <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>

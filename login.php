@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<div class="auth-form">
+<div class="auth-page-bg"><div class="auth-form">
     <h2>用户登录</h2>
     <?php if ($error): ?><div class="alert alert-error"><?= $error ?></div><?php endif; ?>
     <form method="post">
@@ -62,4 +62,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 </div>
 
-<?php require_once 'includes/footer.php'; ?>
+</div><?php require_once 'includes/footer.php'; ?>

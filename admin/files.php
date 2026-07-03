@@ -1,56 +1,106 @@
 <?php
 require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/file_service.php';
+
 if (!hasRole('super_admin', 'admin', 'editor')) redirect('/myweb/login.php?redirect=/myweb/admin/files.php');
 
 $uploadDir = __DIR__ . '/../uploads/';
 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
 $message = '';
+$msgType = 'success';
 
-// 上传处理
+// ===== 上传 =====
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['files'])) {
     verifyCsrf();
     $files = $_FILES['files'];
     $count = count($files['name']);
     $successCount = 0;
-    $allowed = ['jpg','jpeg','png','gif','webp','ico','pdf','doc','docx','xls','xlsx','ppt','pptx','txt','zip','rar','7z','tar','gz','mp3','mp4','mov','avi'];
+    $allowedExts = FileService::getAllowedExts();
 
     for ($i = 0; $i < $count; $i++) {
         if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
         $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowed)) continue;
+        if (!in_array($ext, $allowedExts, true)) continue;
         if ($files['size'][$i] > 50 * 1024 * 1024) continue;
-        // 图片类额外验证 MIME 类型
-        if (in_array($ext, ['jpg','jpeg','png','gif','webp','ico'])) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($finfo, $files['tmp_name'][$i]);
-            finfo_close($finfo);
-            $imageMime = ['image/jpeg','image/png','image/gif','image/webp','image/svg+xml','image/x-icon','image/vnd.microsoft.icon'];
-            if (!in_array($mime, $imageMime)) continue;
-        }
 
-        $filename = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._\-\x{4e00}-\x{9fa5}]/u', '_', $files['name'][$i]);
-        if (move_uploaded_file($files['tmp_name'][$i], $uploadDir . $filename)) {
-            $successCount++;
-        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $files['tmp_name'][$i]);
+        finfo_close($finfo);
+
+        $validMimes = [
+            'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'], 'png' => ['image/png'],
+            'gif' => ['image/gif'], 'webp' => ['image/webp'], 'ico' => ['image/x-icon','image/vnd.microsoft.icon'],
+            'pdf' => ['application/pdf'],
+            'doc' => ['application/msword'], 'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            'xls' => ['application/vnd.ms-excel'], 'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            'ppt' => ['application/vnd.ms-powerpoint'], 'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            'txt' => ['text/plain'], 'zip' => ['application/zip','application/x-zip-compressed'],
+            'rar' => ['application/x-rar-compressed','application/vnd.rar'], '7z' => ['application/x-7z-compressed'],
+            'tar' => ['application/x-tar'], 'gz' => ['application/gzip','application/x-gzip'],
+            'mp3' => ['audio/mpeg'], 'mp4' => ['video/mp4'], 'mov' => ['video/quicktime'], 'avi' => ['video/x-msvideo'],
+        ];
+        if (isset($validMimes[$ext]) && !in_array($mime, $validMimes[$ext], true)) continue;
+
+        $filename = FileService::generateSafeFilename($files['name'][$i], $ext);
+        if (move_uploaded_file($files['tmp_name'][$i], $uploadDir . $filename)) $successCount++;
     }
     $message = "上传完成: $successCount/$count 个文件成功";
 }
 
-// 删除处理
+// ===== 删除 =====
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {
     verifyCsrf();
     $file = basename($_POST['delete']);
     $path = $uploadDir . $file;
     if (file_exists($path) && is_file($path)) {
         unlink($path);
-        $message = "文件已删除: $file";
+        $message = "已删除: " . htmlspecialchars($file);
     }
-    redirect('/myweb/admin/files.php');
 }
 
-// 扫描文件（使用 helpers.php 中的共享函数）
-$files = getUploadedFiles();
+// ===== 重命名 =====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_old'])) {
+    verifyCsrf();
+    $oldName = basename($_POST['rename_old']);
+    $newName = trim($_POST['rename_new'] ?? '');
+    if ($newName && $oldName !== $newName) {
+        // 确保扩展名不变
+        $oldExt = strtolower(pathinfo($oldName, PATHINFO_EXTENSION));
+        $newExt = strtolower(pathinfo($newName, PATHINFO_EXTENSION));
+        if ($newExt !== $oldExt) {
+            $newName = pathinfo($newName, PATHINFO_FILENAME) . '.' . $oldExt;
+        }
+        // 安全过滤文件名
+        $newName = preg_replace('/[\/\\\\:\*\?"<>|]/', '_', $newName);
+        if (FileService::renameFile($oldName, $newName)) {
+            $message = "已重命名为: " . htmlspecialchars($newName);
+        } else {
+            $message = "重命名失败（目标文件已存在或权限不足）";
+            $msgType = 'error';
+        }
+    }
+}
+
+// ===== 编辑文本内容 =====
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_file'])) {
+    verifyCsrf();
+    $fileName = basename($_POST['edit_file']);
+    $content = $_POST['edit_content'] ?? '';
+    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    if (FileService::isTextEditable($ext)) {
+        if (FileService::saveTextFile($fileName, $content)) {
+            $message = "已保存: " . htmlspecialchars($fileName);
+        } else {
+            $message = "保存失败: " . htmlspecialchars($fileName);
+            $msgType = 'error';
+        }
+    }
+}
+
+$fileData = FileService::getFiles();
+$files = $fileData['files'];
+$stats = $fileData['stats'];
 ?>
 
 <div class="admin-layout">
@@ -58,7 +108,9 @@ $files = getUploadedFiles();
     <main class="admin-main">
         <h2>文件管理</h2>
 
-        <?php if ($message): ?><div class="alert alert-success"><?= $message ?></div><?php endif; ?>
+        <?php if ($message): ?>
+        <div class="alert alert-<?= $msgType ?>"><?= $message ?></div>
+        <?php endif; ?>
 
         <!-- 上传区域 -->
         <div class="upload-zone" id="uploadZone">
@@ -67,51 +119,47 @@ $files = getUploadedFiles();
             <p class="upload-hint">支持图片、文档、压缩包等，单文件最大 50MB</p>
             <form method="post" enctype="multipart/form-data" id="uploadForm">
                 <?= csrfField() ?>
-            <input type="file" name="files[]" id="fileInput" multiple style="display:none" onchange="document.getElementById('uploadForm').submit()">
+                <input type="file" name="files[]" id="fileInput" multiple style="display:none" onchange="document.getElementById('uploadForm').submit()">
                 <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件上传</button>
             </form>
         </div>
 
         <!-- 文件统计 -->
-        <div class="stats-grid" style="margin: 20px 0;">
-            <div class="stat-card">
-                <h3><?= count($files) ?></h3>
-                <p>全部文件</p>
-            </div>
-            <div class="stat-card">
-                <h3><?= count(array_filter($files, fn($f) => $f['is_image'])) ?></h3>
-                <p>图片</p>
-            </div>
-            <div class="stat-card">
-                <h3><?= formatSize(array_sum(array_column($files, 'size'))) ?></h3>
-                <p>总大小</p>
-            </div>
+        <div class="stats-grid" style="margin:20px 0">
+            <div class="stat-card"><h3><?= $stats['total'] ?></h3><p>全部文件</p></div>
+            <div class="stat-card"><h3><?= count(array_filter($files, fn($f) => $f['is_image'])) ?></h3><p>图片</p></div>
+            <div class="stat-card"><h3><?= formatSize($stats['totalSize']) ?></h3><p>总大小</p></div>
         </div>
 
-        <!-- 文件列表 -->
         <?php if (empty($files)): ?>
             <div class="empty-state"><p>还没有上传文件</p></div>
         <?php else: ?>
-        <div class="file-grid">
+        <div class="admin-file-grid">
             <?php foreach ($files as $f): ?>
-            <div class="file-item">
-                <div class="file-preview">
+            <?php
+                $rawName = $f['name'];
+                $rawExt  = $f['ext'];
+                $editable = FileService::isTextEditable($rawExt);
+            ?>
+            <div class="admin-file-item">
+                <div class="admin-file-preview">
                     <?php if ($f['is_image']): ?>
-                        <img src="/myweb/uploads/<?= rawurlencode($f['name']) ?>" alt="">
+                        <img src="/myweb/uploads/<?= rawurlencode($rawName) ?>" alt="" loading="lazy">
                     <?php else: ?>
-                        <div class="file-icon"><?php
-                            $icons = ['pdf'=>'📄','zip'=>'📦','rar'=>'📦','7z'=>'📦','gz'=>'📦','doc'=>'📝','docx'=>'📝','txt'=>'📃','mp3'=>'🎵','mp4'=>'🎬','mov'=>'🎬'];
-                            echo $icons[$f['ext']] ?? '📎';
-                        ?></div>
+                        <div class="admin-file-icon"><?= $f['icon'] ?></div>
                     <?php endif; ?>
                 </div>
-                <div class="file-info">
-                    <div class="file-name" title="<?= htmlspecialchars($f['name']) ?>"><?= htmlspecialchars($f['name']) ?></div>
-                    <div class="file-meta"><?= formatSize($f['size']) ?> · <?= date('Y-m-d', $f['time']) ?></div>
+                <div class="admin-file-info">
+                    <div class="admin-file-name" title="<?= htmlspecialchars($rawName) ?>"><?= htmlspecialchars($rawName) ?></div>
+                    <div class="admin-file-meta"><?= formatSize($f['size']) ?> · <?= date('Y-m-d', $f['time']) ?></div>
                 </div>
-                <div class="file-actions">
-                    <button class="btn-sm" onclick="copyUrl('<?= '/myweb/uploads/' . rawurlencode($f['name']) ?>')">复制链接</button>
-                    <?= deleteForm('/myweb/admin/files.php', 'delete', $f['name'], '删除') ?>
+                <div class="admin-file-actions">
+                    <button class="btn-sm" onclick="copyUrl('<?= '/myweb/uploads/' . rawurlencode($rawName) ?>')">复制</button>
+                    <button class="btn-sm" onclick="openRename('<?= htmlspecialchars($rawName, ENT_QUOTES) ?>')">重命名</button>
+                    <?php if ($editable): ?>
+                    <button class="btn-sm btn-edit" onclick="openEdit('<?= htmlspecialchars($rawName, ENT_QUOTES) ?>')">编辑</button>
+                    <?php endif; ?>
+                    <?= deleteForm('/myweb/admin/files.php', 'delete', $rawName, '删除') ?>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -120,77 +168,110 @@ $files = getUploadedFiles();
     </main>
 </div>
 
+<!-- 重命名弹窗 -->
+<div id="renameModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('renameModal')">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h4>重命名文件</h4>
+            <button class="modal-close" onclick="closeModal('renameModal')">✕</button>
+        </div>
+        <form method="post" id="renameForm">
+            <?= csrfField() ?>
+            <input type="hidden" name="rename_old" id="renameOld">
+            <div class="form-group">
+                <label>新文件名</label>
+                <input type="text" name="rename_new" id="renameNew" required>
+                <small class="text-muted text-sm">扩展名会自动保持一致</small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeModal('renameModal')">取消</button>
+                <button type="submit" class="btn btn-primary">确认重命名</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 编辑文本弹窗 -->
+<div id="editModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal('editModal')">
+    <div class="modal-box modal-box-lg">
+        <div class="modal-header">
+            <h4>编辑文件内容</h4>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <form method="post" id="editForm">
+            <?= csrfField() ?>
+            <input type="hidden" name="edit_file" id="editFile">
+            <div class="form-group">
+                <label id="editFileName" style="font-weight:600;color:var(--accent-light);margin-bottom:var(--sp-2);display:block"></label>
+                <div class="code-editor-wrap">
+                    <textarea name="edit_content" id="editContent" rows="24" class="code-editor-textarea" spellcheck="false"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="closeModal('editModal')">取消</button>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function copyUrl(url) {
-    navigator.clipboard.writeText(url).then(() => {
-        const btn = event.target;
-        const text = btn.textContent;
+    navigator.clipboard.writeText(url).then(function() {
+        var btn = event.target;
+        var text = btn.textContent;
         btn.textContent = '✅ 已复制';
-        setTimeout(() => btn.textContent = text, 1500);
+        setTimeout(function() { btn.textContent = text; }, 1500);
     });
 }
 
-// 拖拽上传
-const zone = document.getElementById('uploadZone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#58a6ff'; zone.style.background = 'rgba(88,166,255,0.1)'; });
-zone.addEventListener('dragleave', () => { zone.style.borderColor = '#30363d'; zone.style.background = 'transparent'; });
-zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.style.borderColor = '#30363d';
-    zone.style.background = 'transparent';
-    const dt = new DataTransfer();
-    for (const file of e.dataTransfer.files) dt.items.add(file);
-    document.getElementById('fileInput').files = dt.files;
-    document.getElementById('uploadForm').submit();
-});
-</script>
+function openRename(name) {
+    document.getElementById('renameOld').value = name;
+    // 预填：提取原始文件名部分（去掉随机前缀）
+    var parts = name.split('_');
+    var displayName = parts.length > 1 ? parts.slice(1).join('_') : name;
+    document.getElementById('renameNew').value = displayName;
+    document.getElementById('renameModal').style.display = 'flex';
+    document.getElementById('renameNew').focus();
+    document.getElementById('renameNew').select();
+}
 
-<style>
-.upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius-lg);
-    padding: 48px 20px;
-    text-align: center;
-    transition: all .2s;
-    cursor: pointer;
+function openEdit(name) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/myweb/uploads/' + encodeURIComponent(name), true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            document.getElementById('editFile').value = name;
+            document.getElementById('editFileName').textContent = name;
+            document.getElementById('editContent').value = xhr.responseText;
+            document.getElementById('editModal').style.display = 'flex';
+        } else {
+            alert('无法读取文件内容');
+        }
+    };
+    xhr.onerror = function() { alert('读取失败'); };
+    xhr.send();
 }
-.upload-zone:hover { border-color: var(--accent); background: rgba(88,166,255,0.05); }
-.upload-icon { font-size: 3rem; margin-bottom: 10px; }
-.upload-hint { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
-.file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
+
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
 }
-.file-item {
-    background: var(--bg-body);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    transition: all .25s ease;
-}
-.file-item:hover { border-color: rgba(88,166,255,0.15); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-.file-preview {
-    height: 140px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-hover);
-    overflow: hidden;
-}
-.file-preview img { width: 100%; height: 100%; object-fit: cover; }
-.file-icon { font-size: 3rem; }
-.file-info { padding: 12px 14px; }
-.file-name {
-    font-size: 0.85rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-}
-.file-meta { font-size: 0.75rem; color: var(--text-muted); }
-.file-actions { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
-</style>
+
+// 拖拽上传
+(function() {
+    var zone = document.getElementById('uploadZone');
+    if (!zone) return;
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = '#6c8cff'; zone.style.background = 'rgba(108,140,255,0.08)'; });
+    zone.addEventListener('dragleave', function() { zone.style.borderColor = ''; zone.style.background = ''; });
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        zone.style.borderColor = ''; zone.style.background = '';
+        var dt = new DataTransfer();
+        for (var i = 0; i < e.dataTransfer.files.length; i++) dt.items.add(e.dataTransfer.files[i]);
+        document.getElementById('fileInput').files = dt.files;
+        document.getElementById('uploadForm').submit();
+    });
+})();
+</script>
 
 <?php require_once '../includes/footer.php'; ?>

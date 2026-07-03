@@ -10,7 +10,6 @@ function isActive(string ...$names): string {
     <ul>
         <li><a href="/myweb/admin/"<?= isActive('index.php') ?>>控制台</a></li>
         <li><a href="/myweb/admin/articles.php"<?= isActive('articles.php', 'article_edit.php') ?>>文章管理</a></li>
-        <li><a href="/myweb/admin/pages.php"<?= isActive('pages.php', 'page_edit.php') ?>>资料管理</a></li>
         <li><a href="/myweb/admin/files.php"<?= isActive('files.php') ?>>文件管理</a></li>
     </ul>
 </div>
