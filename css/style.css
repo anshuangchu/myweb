@@ -2350,7 +2350,7 @@ body {
 }
 
 .admin-main {
-  background: linear-gradient(180deg, rgba(21,21,31,0.88) 0%, rgba(21,21,31,0.95) 100%), url('/myweb/uploads/bg-forest.jpg') center/cover no-repeat;
+  background: linear-gradient(180deg, rgba(21,21,31,0.88) 0%, rgba(21,21,31,0.95) 100%), url('/myweb/uploads/bg-ocean.jpg') center/cover no-repeat;
   padding: var(--sp-8);
   border-radius: var(--radius-md);
   border: 1px solid var(--gray-700);
